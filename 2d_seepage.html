@@ -1,0 +1,2778 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEEPAGE CAD</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM (Production) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel (για να τρέξει το JSX κατευθείαν στον browser) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-100 overflow-hidden">
+    
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        // --- Ενσωμάτωση των εικονιδίων Lucide ως React Components ---
+        const Activity = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>;
+        const Play = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>;
+        const Pause = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>;
+        const Undo2 = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>;
+        const Trash2 = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>;
+        const Plus = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>;
+        const Minus = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" x2="19" y1="12" y2="12"/></svg>;
+        const Maximize = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>;
+        const ClipboardList = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>;
+        const Magnet = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 15-4-4 6.75-6.77a7.79 7.79 0 0 1 11 11L13 22l-4-4 6.39-6.36a2.14 2.14 0 0 0-3-3L6 15"/></svg>;
+        const MousePointer2 = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m4 4 7.07 17 2.51-7.39L21 11.07z"/></svg>;
+        const PenTool = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>;
+        const Calculator = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>;
+        const X = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
+        const Hand = ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 7.5a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M10 9.5a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M18 11a2 2 0 1 1 4 0v6.5a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/><path d="M6 10.5V5a2 2 0 0 1 2-2v0a2 2 0 0 1 2 2v0"/></svg>;
+
+        // --- Physical Constants ---
+        const CANVAS_RES_X = 1000;
+        const CANVAS_RES_Y = 500;
+
+        // Material/Cell Types
+        const MAT_SOIL_UNIT = 'soil_unit';    
+        const MAT_SOIL_DEFAULT = 'soil_def'; 
+        const MAT_SOIL_CLAY = 'soil_clay';    
+        const MAT_SOIL_SAND = 'soil_sand';    
+        const MAT_IMPERMEABLE = 'impermeable';
+        const MAT_WATER = 'water';
+
+        // Base permeability (ky)
+        const K_VALUES = {
+            [MAT_SOIL_UNIT]: 1.0,
+            [MAT_SOIL_DEFAULT]: 0.1,
+            [MAT_SOIL_CLAY]: 0.0001, 
+            [MAT_SOIL_SAND]: 1000.0, 
+            [MAT_IMPERMEABLE]: 0.0
+        };
+
+        const K_DISPLAY = {
+            [MAT_SOIL_UNIT]: '1',
+            [MAT_SOIL_DEFAULT]: '10⁻¹',
+            [MAT_SOIL_CLAY]: '10⁻⁴',
+            [MAT_SOIL_SAND]: '10³',
+            [MAT_IMPERMEABLE]: '0'
+        };
+
+        // Anisotropy Ratios (kx / ky)
+        const ANISO_RATIOS = {
+            [MAT_SOIL_UNIT]: 1.0,
+            [MAT_SOIL_DEFAULT]: 2.0,
+            [MAT_SOIL_CLAY]: 5.0, 
+            [MAT_SOIL_SAND]: 1.0, 
+            [MAT_IMPERMEABLE]: 1.0,
+            [MAT_WATER]: 1.0
+        };
+
+        const interpColor = (ratio, c1, c2, c3) => {
+            const t = ratio < 0.5 ? ratio * 2 : (ratio - 0.5) * 2;
+            const start = ratio < 0.5 ? c1 : c2, end = ratio < 0.5 ? c2 : c3;
+            const r = Math.round(start[0] + t * (end[0] - start[0]));
+            const g = Math.round(start[1] + t * (end[1] - start[1]));
+            const b = Math.round(start[2] + t * (end[2] - start[2]));
+            return `rgb(${r}, ${g}, ${b})`;
+        };
+        const cHead = r => interpColor(r, [186,230,253], [108,144,200], [30,58,138]);
+        const cVel = r => interpColor(r, [255,255,255], [252,211,77], [220,38,38]);
+        const cPress = r => interpColor(r, [207,250,254], [59,130,246], [126,34,206]);
+
+        function App() {
+            // --- React State for UI ---
+            const [uiState, setUiState] = useState({
+                toolMode: 'select', 
+                selectedElementIndex: null, 
+                domainWidth: 100,
+                meshRes: 100, 
+                selectedMaterial: MAT_SOIL_DEFAULT,
+                drawMode: 'polygon', 
+                strokeWidth: 2,
+                snapEnabled: true,
+                isSolving: true, 
+                isDrawingPolygon: false, 
+                numStreamlines: 5,
+                numEquipotentials: 15,
+                showHeatmap: true,
+                heatmapType: 'head',
+                showFlowLines: true,
+                showEquipotentials: true,
+                showLabels: true,
+                showCircles: false,
+                anisotropyEnabled: false,
+                transformX: false,
+                showPressures: false,
+                showQModal: false,
+                isResultsBoxOpen: false,
+            });
+
+            // Immutable ref to always hold the freshest state for the game loops
+            const ui = useRef(uiState);
+            
+            // Custom setter that updates both the ref synchronously and triggers re-render
+            const setUi = useCallback((updater) => {
+                const next = typeof updater === 'function' ? updater(ui.current) : { ...ui.current, ...updater };
+                ui.current = next;
+                setUiState(next);
+            }, []);
+
+            const [results, setResults] = useState({ q: 0, iMax: 0, fs: 0 });
+            const [legend, setLegend] = useState({ min: '-', max: '-' });
+
+            // --- DOM Refs ---
+            const cursorXRef = useRef(null);
+            const cursorValRef = useRef(null);
+            const errorTextRef = useRef(null);
+            const canvasRef = useRef(null);
+            const wrapperRef = useRef(null);
+            const rulerCanvasRef = useRef(null);
+            const reqRef = useRef(null);
+
+            // --- Simulation Engine State ---
+            const sim = useRef({
+                geometryChanged: true, 
+                DOMAIN_WIDTH: 100,
+                DOMAIN_HEIGHT: 50,
+                GRID_W: 100,
+                GRID_H: 50,
+                zoomLevel: 1.0,
+                panOffset: { x: 0, y: 0 },
+                isPanning: false,
+                isSpacePressed: false,
+                lastPanPoint: null, // Προσθήκη για tablet panning
+                hasResults: false, 
+                
+                history: [], // Προσθήκη συστήματος ιστορικού για UNDO
+                snapshotBeforeDrag: null, // Αποθήκευση κατάστασης πριν την έναρξη του drag
+
+                dominantRatio: 1.0,
+                dominantK: 1.0,
+
+                elements: [
+                    { type: 'polygon', material: MAT_SOIL_UNIT, points: [
+                        {x: 0, z: 46}, {x: 49, z: 46}, {x: 49, z: 25}, {x: 100, z: 25}, {x: 100, z: 0}, {x: 0, z: 0}
+                    ]},
+                    { type: 'polygon', material: MAT_IMPERMEABLE, points: [
+                        {x: 49, z: 50}, {x: 52, z: 50}, {x: 52, z: 20}, {x: 49, z: 20}
+                    ]},
+                    { type: 'line', material: MAT_WATER, width: 2, x1: 0, z1: 40, x2: 49, z2: 40, headValue: 40 },
+                    { type: 'line', material: MAT_WATER, width: 2, x1: 52, z1: 25, x2: 100, z2: 25, headValue: 25 },
+                ],
+                currentElement: null, 
+                activePolygon: null,  
+                
+                isDraggingElement: false,
+                dragStartPos: {x: 0, z: 0},
+                dragElementStart: null,
+                draggedPointIndex: null,
+                dragMoved: false,
+                velocityProbes: [],
+
+                cursorPos: { x: 0, z: 0 },
+                iteration: 0,
+                maxError: 0,
+                systemFlux: 0,
+                minHead: 0, maxHead: 50,
+                minPress: 0, maxPress: 0,
+                maxVel: 0,
+                
+                gridK: Array(100).fill().map(() => Array(50).fill(0)),
+                gridRatio: Array(100).fill().map(() => Array(50).fill(1.0)),
+                gridHeads: Array(100).fill().map(() => Array(50).fill(0)),
+                gridFixed: Array(100).fill().map(() => Array(50).fill(false))
+            });
+
+            const getTransformFactor = useCallback(() => {
+                if (ui.current.anisotropyEnabled && ui.current.transformX && sim.current.dominantRatio > 0) {
+                    return Math.sqrt(1 / sim.current.dominantRatio);
+                }
+                return 1.0;
+            }, []);
+
+            // =========================================================================
+            // 0. RULERS ENGINE (Tablet / CSS scaling adjusted)
+            // =========================================================================
+            const drawRulers = useCallback(() => {
+                const rCanvas = rulerCanvasRef.current;
+                const canvas = canvasRef.current;
+                if (!rCanvas || !canvas) return;
+                
+                const ctx = rCanvas.getContext('2d');
+                const rRect = rCanvas.getBoundingClientRect();
+                const cRect = canvas.getBoundingClientRect();
+                
+                if (rCanvas.width !== rRect.width || rCanvas.height !== rRect.height) {
+                    rCanvas.width = rRect.width;
+                    rCanvas.height = rRect.height;
+                }
+
+                ctx.clearRect(0, 0, rCanvas.width, rCanvas.height);
+                const R_SIZE = 24; 
+                
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.fillRect(0, 0, rCanvas.width, R_SIZE); 
+                ctx.fillRect(0, rCanvas.height - R_SIZE, rCanvas.width, R_SIZE); 
+                ctx.fillRect(0, 0, R_SIZE, rCanvas.height); 
+                ctx.fillRect(rCanvas.width - R_SIZE, 0, R_SIZE, rCanvas.height); 
+
+                ctx.strokeStyle = '#cbd5e1'; 
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, R_SIZE); ctx.lineTo(rCanvas.width, R_SIZE);
+                ctx.moveTo(0, rCanvas.height - R_SIZE); ctx.lineTo(rCanvas.width, rCanvas.height - R_SIZE);
+                ctx.moveTo(R_SIZE, 0); ctx.lineTo(R_SIZE, rCanvas.height);
+                ctx.moveTo(rCanvas.width - R_SIZE, 0); ctx.lineTo(rCanvas.width - R_SIZE, rCanvas.height);
+                ctx.stroke();
+
+                ctx.fillStyle = '#475569'; 
+                ctx.strokeStyle = '#94a3b8'; 
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                const domainW = sim.current.DOMAIN_WIDTH;
+                const domainH = sim.current.DOMAIN_HEIGHT;
+                const zoomLevel = sim.current.zoomLevel;
+                const panOffset = sim.current.panOffset;
+                const tf = getTransformFactor();
+                
+                const calcStep = (ppm) => {
+                    const idealStep = 80 / ppm;
+                    const order = Math.floor(Math.log10(idealStep));
+                    const mag = Math.pow(10, order);
+                    const norm = idealStep / mag;
+                    if (norm < 1.5) return 1 * mag;
+                    if (norm < 3) return 2 * mag;
+                    if (norm < 7) return 5 * mag;
+                    return 10 * mag;
+                };
+
+                const formatNum = (num, stp) => {
+                    if (stp >= 1) return Math.round(num).toString();
+                    if (stp >= 0.1) return num.toFixed(1);
+                    return num.toFixed(2);
+                };
+
+                // Υπολογισμός κλιμάκωσης CSS προς Εσωτερικές Διαστάσεις
+                const scaleX_css = CANVAS_RES_X / cRect.width;
+                const scaleY_css = CANVAS_RES_Y / cRect.height;
+
+                const mapXToPixel = (x) => {
+                    const px_unzoomed = (x / domainW) * CANVAS_RES_X * tf;
+                    const x_internal = px_unzoomed * zoomLevel + panOffset.x;
+                    return (x_internal / scaleX_css) + (cRect.left - rRect.left);
+                };
+
+                const mapZToPixel = (z) => {
+                    const py_unzoomed = ((domainH - z) / domainH) * CANVAS_RES_Y;
+                    const y_internal = py_unzoomed * zoomLevel + panOffset.y;
+                    return (y_internal / scaleY_css) + (cRect.top - rRect.top);
+                };
+
+                const pixelToMapX = (px_ruler) => {
+                    const x_css = px_ruler - (cRect.left - rRect.left);
+                    const x_internal = x_css * scaleX_css;
+                    const px_unzoomed = (x_internal - panOffset.x) / zoomLevel;
+                    return (px_unzoomed / (CANVAS_RES_X * tf)) * domainW;
+                };
+
+                const pixelToMapZ = (py_ruler) => {
+                    const y_css = py_ruler - (cRect.top - rRect.top);
+                    const y_internal = y_css * scaleY_css;
+                    const py_unzoomed = (y_internal - panOffset.y) / zoomLevel;
+                    return domainH - (py_unzoomed / CANVAS_RES_Y) * domainH;
+                };
+
+                // --- X AXIS RULER ---
+                const ppmX = (cRect.width * zoomLevel * tf) / domainW;
+                const stepX = calcStep(ppmX);
+
+                const startXMap = pixelToMapX(R_SIZE);
+                const endXMap = pixelToMapX(rCanvas.width - R_SIZE);
+                const minX = Math.min(startXMap, endXMap);
+                const maxX = Math.max(startXMap, endXMap);
+                const firstTickX = Math.ceil(minX / stepX) * stepX;
+                
+                ctx.beginPath();
+                for (let x = firstTickX; x <= maxX; x += stepX) {
+                    const px = mapXToPixel(x);
+                    if (px >= R_SIZE && px <= rCanvas.width - R_SIZE) {
+                        ctx.moveTo(px, R_SIZE); ctx.lineTo(px, R_SIZE - 6);
+                        ctx.fillText(formatNum(x, stepX), px, R_SIZE / 2);
+                        ctx.moveTo(px, rCanvas.height - R_SIZE); ctx.lineTo(px, rCanvas.height - R_SIZE + 6);
+                        ctx.fillText(formatNum(x, stepX), px, rCanvas.height - R_SIZE / 2);
+                    }
+                }
+                ctx.stroke();
+
+                // --- Z AXIS RULER ---
+                const ppmZ = (cRect.height * zoomLevel) / domainH;
+                const stepZ = calcStep(ppmZ);
+
+                const startZMap = pixelToMapZ(R_SIZE);
+                const endZMap = pixelToMapZ(rCanvas.height - R_SIZE);
+                const minZ = Math.min(startZMap, endZMap);
+                const maxZ = Math.max(startZMap, endZMap);
+                const firstTickZ = Math.ceil(minZ / stepZ) * stepZ;
+                
+                ctx.beginPath();
+                for (let z = firstTickZ; z <= maxZ; z += stepZ) {
+                    const pz = mapZToPixel(z);
+                    if (pz >= R_SIZE && pz <= rCanvas.height - R_SIZE) {
+                        ctx.moveTo(R_SIZE, pz); ctx.lineTo(R_SIZE - 6, pz);
+                        ctx.save();
+                        ctx.translate(R_SIZE / 2, pz);
+                        ctx.rotate(-Math.PI / 2);
+                        ctx.fillText(formatNum(z, stepZ), 0, 0);
+                        ctx.restore();
+                        
+                        ctx.moveTo(rCanvas.width - R_SIZE, pz); ctx.lineTo(rCanvas.width - R_SIZE + 6, pz);
+                        ctx.save();
+                        ctx.translate(rCanvas.width - R_SIZE / 2, pz);
+                        ctx.rotate(Math.PI / 2);
+                        ctx.fillText(formatNum(z, stepZ), 0, 0);
+                        ctx.restore();
+                    }
+                }
+                ctx.stroke();
+
+                // Corner overlaps to prevent text overlap
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                ctx.fillRect(0, 0, R_SIZE, R_SIZE);
+                ctx.fillRect(rCanvas.width - R_SIZE, 0, R_SIZE, R_SIZE);
+                ctx.fillRect(0, rCanvas.height - R_SIZE, R_SIZE, R_SIZE);
+                ctx.fillRect(rCanvas.width - R_SIZE, rCanvas.height - R_SIZE, R_SIZE, R_SIZE);
+                
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.strokeRect(0, 0, R_SIZE, R_SIZE);
+                ctx.strokeRect(rCanvas.width - R_SIZE, 0, R_SIZE, R_SIZE);
+                ctx.strokeRect(0, rCanvas.height - R_SIZE, R_SIZE, R_SIZE);
+                ctx.strokeRect(rCanvas.width - R_SIZE, rCanvas.height - R_SIZE, R_SIZE, R_SIZE);
+            }, [getTransformFactor]);
+
+            useEffect(() => {
+                const resizeObserver = new ResizeObserver(() => drawRulers());
+                if (rulerCanvasRef.current && rulerCanvasRef.current.parentElement) {
+                    resizeObserver.observe(rulerCanvasRef.current.parentElement);
+                }
+                return () => resizeObserver.disconnect();
+            }, [drawRulers]);
+
+            // =========================================================================
+            // 1. ΒΟΗΘΗΤΙΚΕΣ ΜΑΘΗΜΑΤΙΚΕΣ ΣΥΝΑΡΤΗΣΕΙΣ
+            // =========================================================================
+            const metersToGrid = useCallback((mx, mz) => {
+                const { GRID_W, GRID_H, DOMAIN_WIDTH, DOMAIN_HEIGHT } = sim.current;
+                const gx = Math.floor((mx / DOMAIN_WIDTH) * GRID_W);
+                const gy = Math.floor(((DOMAIN_HEIGHT - mz) / DOMAIN_HEIGHT) * GRID_H);
+                return { x: gx, y: gy };
+            }, []);
+
+            const getHeadAt = useCallback((gx, gy) => {
+                const { gridHeads, GRID_W, GRID_H } = sim.current;
+                const clampX = (val) => Math.max(0, Math.min(GRID_W - 1, val));
+                const clampY = (val) => Math.max(0, Math.min(GRID_H - 1, val));
+                
+                const ix = Math.floor(gx), iy = Math.floor(gy);
+                const fx = gx - ix, fy = gy - iy;
+                
+                const h00 = gridHeads[clampX(ix)][clampY(iy)]; 
+                const h10 = gridHeads[clampX(ix+1)][clampY(iy)];
+                const h01 = gridHeads[clampX(ix)][clampY(iy+1)];
+                const h11 = gridHeads[clampX(ix+1)][clampY(iy+1)];
+
+                return h00*(1-fx)*(1-fy) + h10*fx*(1-fy) + h01*(1-fx)*fy + h11*fx*fy;
+            }, []);
+
+            const getPressureAt = useCallback((gx, gy) => {
+                const h = getHeadAt(gx, gy);
+                if (h <= -9000) return -9999;
+                const { GRID_H, DOMAIN_HEIGHT } = sim.current;
+                const z = DOMAIN_HEIGHT - (gy + 0.5) * (DOMAIN_HEIGHT / GRID_H);
+                return (h - z) * 10;
+            }, [getHeadAt]);
+
+            const getContinuousVelocityAt = useCallback((gx, gy) => {
+                const { gridK, gridRatio, gridFixed, GRID_W, GRID_H } = sim.current;
+                const clampX = (v) => Math.max(0, Math.min(GRID_W - 1, v));
+                const clampY = (v) => Math.max(0, Math.min(GRID_H - 1, v));
+                
+                const ix = clampX(Math.floor(gx));
+                const iy = clampY(Math.floor(gy));
+                const Ky = gridK[ix][iy];
+                if (Ky <= 0) return {x:0, y:0, k:0};
+
+                const h0 = getHeadAt(gx, gy);
+                if (h0 <= -9000) return {x:0, y:0, k:0};
+
+                const eps = 0.5;
+                let hx1 = getHeadAt(gx + eps, gy);
+                let hx2 = getHeadAt(gx - eps, gy);
+                let hy1 = getHeadAt(gx, gy + eps);
+                let hy2 = getHeadAt(gx, gy - eps);
+
+                const isImpermeable = (cx, cy) => {
+                    const idx = Math.floor(cx);
+                    const idy = Math.floor(cy);
+                    if (idy >= GRID_H) return true; 
+                    if (idy < 0) return false;      
+                    if (idx < 0) return true;       
+                    if (idx >= GRID_W) return true; 
+                    return gridK[idx][idy] === 0 && !gridFixed[idx][idy]; 
+                };
+
+                if (isImpermeable(gx + eps, gy)) hx1 = h0;
+                if (isImpermeable(gx - eps, gy)) hx2 = h0;
+                if (isImpermeable(gx, gy + eps)) hy1 = h0;
+                if (isImpermeable(gx, gy - eps)) hy2 = h0;
+
+                let dh_dx = (hx1 - hx2) / (2 * eps);
+                let dh_dy = (hy1 - hy2) / (2 * eps);
+
+                const ratio = ui.current.anisotropyEnabled ? gridRatio[ix][iy] : 1.0;
+                const Kx = Ky * ratio;
+
+                return { x: -Kx * dh_dx, y: -Ky * dh_dy, k: Ky };
+            }, [getHeadAt]);
+
+            const getVelocityMagAt = useCallback((gx, gy) => {
+                const v = getContinuousVelocityAt(gx, gy);
+                return Math.sqrt(v.x*v.x + v.y*v.y);
+            }, [getContinuousVelocityAt]);
+
+            // =========================================================================
+            // 2. ΣΥΝΑΡΤΗΣΕΙΣ ΑΠΟΤΕΛΕΣΜΑΤΩΝ & UI
+            // =========================================================================
+            const calculateResults = useCallback(() => {
+                if (!sim.current.hasResults && !ui.current.isSolving) {
+                    setResults(prev => (prev.q === 0 && prev.iMax === 0 && prev.fs === 0) ? prev : { q: 0, iMax: 0, fs: 0 });
+                    return;
+                }
+
+                const { systemFlux, gridFixed, gridK, GRID_W, GRID_H } = sim.current;
+                let maxExitGrad = 0;
+                for(let x=1; x<GRID_W-1; x++){
+                    for(let y=1; y<GRID_H-1; y++){
+                        if(!gridFixed[x][y] && gridK[x][y] > 0) {
+                            if (gridFixed[x][y-1]) {
+                                const v = getVelocityMagAt(x, y);
+                                const i = v / gridK[x][y];
+                                if (i > maxExitGrad) maxExitGrad = i;
+                            }
+                        }
+                    }
+                }
+                const fs = maxExitGrad > 0.001 ? 1.0 / maxExitGrad : 0;
+                
+                setResults(prev => {
+                    if (Math.abs(prev.q - systemFlux) < 1e-9 && Math.abs(prev.iMax - maxExitGrad) < 1e-6 && Math.abs(prev.fs - fs) < 1e-4) {
+                        return prev;
+                    }
+                    return { q: systemFlux, iMax: maxExitGrad, fs: fs };
+                });
+            }, [getVelocityMagAt]);
+
+            const updateHighFreqUI = useCallback(() => {
+                if (errorTextRef.current) errorTextRef.current.innerText = `Err: ${sim.current.maxError.toExponential(1)}`;
+                if (cursorXRef.current) cursorXRef.current.innerText = `X=${sim.current.cursorPos.x.toFixed(2)} Z=${sim.current.cursorPos.z.toFixed(2)}`;
+                
+                let u_val = 0;
+                const { DOMAIN_WIDTH, DOMAIN_HEIGHT, GRID_W, GRID_H, gridK, gridFixed } = sim.current;
+                const gx = (sim.current.cursorPos.x / DOMAIN_WIDTH) * GRID_W;
+                const gy = ((DOMAIN_HEIGHT - sim.current.cursorPos.z) / DOMAIN_HEIGHT) * GRID_H;
+                
+                if (gx >= 0 && gx < GRID_W && gy >= 0 && gy < GRID_H) {
+                    const ix = Math.floor(gx), iy = Math.floor(gy);
+                    if (gridK[ix][iy] > 0 || gridFixed[ix][iy]) { 
+                        const h_cursor = getHeadAt(gx, gy);
+                        if (h_cursor > -9000) {
+                            u_val = (h_cursor - sim.current.cursorPos.z) * 10; 
+                        }
+                    }
+                }
+                if (cursorValRef.current) cursorValRef.current.innerText = `u=${u_val.toFixed(1)} kPa`;
+            }, [getHeadAt]);
+
+            // =========================================================================
+            // 3. ΣΥΝΑΡΤΗΣΕΙΣ RASTERIZATION (Δημιουργία Πλέγματος)
+            // =========================================================================
+            const rasterize = useCallback(() => {
+                const isGeoChange = sim.current.geometryChanged;
+                sim.current.geometryChanged = false;
+
+                if (isGeoChange) {
+                    sim.current.velocityProbes = [];
+                }
+
+                if (!isGeoChange && sim.current.hasResults) return; 
+
+                const { GRID_W, GRID_H, DOMAIN_HEIGHT } = sim.current;
+                const K = Array(GRID_W).fill().map(() => Array(GRID_H).fill(0));
+                const R = Array(GRID_W).fill().map(() => Array(GRID_H).fill(1.0)); 
+                const Fixed = Array(GRID_W).fill().map(() => Array(GRID_H).fill(false));
+                const Heads = sim.current.gridHeads; 
+                
+                if (isGeoChange) {
+                    for(let x=0; x<GRID_W; x++) for(let y=0; y<GRID_H; y++) Heads[x][y] = 0;
+                }
+
+                let localMin = 999, localMax = -999, hasWater = false;
+                const waterLevels = Array(GRID_W).fill(-1);
+
+                const drawLineOnGrid = (l) => {
+                    const dx = sim.current.DOMAIN_WIDTH / GRID_W; 
+                    const dy = DOMAIN_HEIGHT / GRID_H;
+                    const buff = l.width + 2;
+                    const minX = Math.min(l.x1, l.x2) - buff;
+                    const maxX = Math.max(l.x1, l.x2) + buff;
+                    const minZ = Math.min(l.z1, l.z2) - buff;
+                    const maxZ = Math.max(l.z1, l.z2) + buff;
+                    const { x: gx1, y: gyMax } = metersToGrid(minX, minZ); 
+                    const { x: gx2, y: gyMin } = metersToGrid(maxX, maxZ); 
+
+                    for(let x = Math.max(0, gx1); x <= Math.min(GRID_W-1, gx2); x++) {
+                        for(let y = Math.max(0, gyMin); y <= Math.min(GRID_H-1, gyMax); y++) {
+                            const cx = (x + 0.5) * dx;
+                            const cz = DOMAIN_HEIGHT - (y + 0.5) * dy;
+                            const A = cx - l.x1, B = cz - l.z1;
+                            const C = l.x2 - l.x1, D = l.z2 - l.z1;
+                            const dot = A * C + B * D;
+                            const len_sq = C * C + D * D;
+                            let param = -1;
+                            if (len_sq !== 0) param = dot / len_sq;
+                            let xx, zz;
+                            if (param < 0) { xx = l.x1; zz = l.z1; }
+                            else if (param > 1) { xx = l.x2; zz = l.z2; }
+                            else { xx = l.x1 + param * C; zz = l.z1 + param * D; }
+                            const dist = Math.hypot(cx - xx, cz - zz);
+
+                            if (dist <= l.width / 2) {
+                                K[x][y] = l.material === MAT_IMPERMEABLE ? -1 : K_VALUES[l.material];
+                                R[x][y] = ANISO_RATIOS[l.material];
+                                Fixed[x][y] = false; 
+                            }
+                        }
+                    }
+                };
+
+                const drawPolygonOnGrid = (poly) => {
+                    if (poly.points.length < 3) return;
+                    const dx = sim.current.DOMAIN_WIDTH / GRID_W; 
+                    const dy = DOMAIN_HEIGHT / GRID_H;
+                    const minX = Math.min(...poly.points.map(p => p.x));
+                    const maxX = Math.max(...poly.points.map(p => p.x));
+                    const minZ = Math.min(...poly.points.map(p => p.z));
+                    const maxZ = Math.max(...poly.points.map(p => p.z));
+                    
+                    const { x: gx1, y: gyMax } = metersToGrid(minX, minZ); 
+                    const { x: gx2, y: gyMin } = metersToGrid(maxX, maxZ);
+                    
+                    for(let x = Math.max(0, gx1); x <= Math.min(GRID_W-1, gx2); x++) {
+                        for(let y = Math.max(0, gyMin); y <= Math.min(GRID_H-1, gyMax); y++) {
+                            const cx = (x + 0.5) * dx;
+                            const cz = DOMAIN_HEIGHT - (y + 0.5) * dy;
+                            
+                            let inside = false;
+                            for (let i = 0, j = poly.points.length - 1; i < poly.points.length; j = i++) {
+                                const xi = poly.points[i].x, yi = poly.points[i].z;
+                                const xj = poly.points[j].x, yj = poly.points[j].z;
+                                const intersect = ((yi > cz) !== (yj > cz)) && (cx < (xj - xi) * (cz - yi) / (yj - yi) + xi);
+                                if (intersect) inside = !inside;
+                            }
+                            
+                            if (inside) {
+                                K[x][y] = poly.material === MAT_IMPERMEABLE ? -1 : K_VALUES[poly.material];
+                                R[x][y] = ANISO_RATIOS[poly.material];
+                                Fixed[x][y] = false; 
+                            }
+                        }
+                    }
+                };
+
+                sim.current.elements.forEach(el => {
+                    if (el.type === 'line' && el.material !== MAT_WATER) drawLineOnGrid(el);
+                    else if (el.type === 'polygon') drawPolygonOnGrid(el);
+                });
+                if (sim.current.currentElement && sim.current.currentElement.type === 'line' && sim.current.currentElement.material !== MAT_WATER) {
+                    drawLineOnGrid(sim.current.currentElement);
+                }
+
+                const processWaterLine = (el) => {
+                    const minX = Math.min(el.x1, el.x2);
+                    const maxX = Math.max(el.x1, el.x2);
+                    const z = el.z1; 
+                    const dx = sim.current.DOMAIN_WIDTH / GRID_W;
+                    const gx1 = Math.max(0, Math.floor(minX / dx));
+                    const gx2 = Math.min(GRID_W - 1, Math.ceil(maxX / dx));
+                    for (let x = gx1; x <= gx2; x++) {
+                        waterLevels[x] = Math.max(waterLevels[x], z);
+                        hasWater = true;
+                    }
+                };
+
+                sim.current.elements.forEach(el => {
+                    if (el.type === 'line' && el.material === MAT_WATER) processWaterLine(el);
+                });
+                if (sim.current.currentElement && sim.current.currentElement.type === 'line' && sim.current.currentElement.material === MAT_WATER) {
+                    processWaterLine(sim.current.currentElement);
+                }
+
+                for (let x = 0; x < GRID_W; x++) {
+                    if (waterLevels[x] > -1) {
+                        for (let y = 0; y < GRID_H; y++) {
+                            const cellBottomZ = DOMAIN_HEIGHT - (y + 1) * (DOMAIN_HEIGHT / GRID_H);
+                            const cellTopZ = DOMAIN_HEIGHT - y * (DOMAIN_HEIGHT / GRID_H);
+                            
+                            if (waterLevels[x] < cellTopZ && waterLevels[x] >= cellBottomZ) {
+                                if (K[x][y] !== -1) { 
+                                    Fixed[x][y] = true;
+                                    Heads[x][y] = waterLevels[x];
+                                    if (waterLevels[x] > localMax) localMax = waterLevels[x];
+                                    if (waterLevels[x] < localMin) localMin = waterLevels[x];
+                                }
+                            } else if (cellTopZ <= waterLevels[x] + 0.001) {
+                                if (K[x][y] > 0 || K[x][y] === -1) break;
+                                Fixed[x][y] = true;
+                                Heads[x][y] = waterLevels[x];
+                                if (waterLevels[x] > localMax) localMax = waterLevels[x];
+                                if (waterLevels[x] < localMin) localMin = waterLevels[x];
+                            }
+                        }
+                    }
+                }
+
+                for (let x = 0; x < GRID_W; x++) {
+                    for (let y = 0; y < GRID_H; y++) {
+                        if (K[x][y] === -1) K[x][y] = 0;
+                    }
+                }
+
+                // --- Calculate Dominant Material properties ---
+                let maxCount = 0, domRatio = 1.0, domK = K_VALUES[MAT_SOIL_UNIT];
+                const counts = {};
+                for(let x=0; x<GRID_W; x++) {
+                    for(let y=0; y<GRID_H; y++) {
+                        if(K[x][y] > 0) {
+                            const key = K[x][y] + '_' + R[x][y];
+                            counts[key] = (counts[key] || 0) + 1;
+                            if(counts[key] > maxCount) {
+                                maxCount = counts[key];
+                                domK = K[x][y];
+                                domRatio = R[x][y];
+                            }
+                        }
+                    }
+                }
+                sim.current.dominantK = domK;
+                sim.current.dominantRatio = domRatio;
+
+                if (isGeoChange) {
+                    const initHead = hasWater ? (localMin + localMax) / 2 : 0;
+                    for (let x = 0; x < GRID_W; x++) {
+                        for (let y = 0; y < GRID_H; y++) {
+                            // Give ALL un-fixed cells (even dead ones inside the wall) the hydrostatic level to avoid 0 readings during dragging/drawing
+                            if (!Fixed[x][y]) Heads[x][y] = initHead;
+                        }
+                    }
+                }
+
+                if (hasWater) {
+                    sim.current.minHead = localMin; sim.current.maxHead = localMax;
+                } else {
+                    sim.current.minHead = 0; sim.current.maxHead = 50;
+                }
+                sim.current.gridK = K;
+                sim.current.gridRatio = R;
+                sim.current.gridFixed = Fixed;
+            }, [metersToGrid]);
+
+            // =========================================================================
+            // 4. ΣΥΝΑΡΤΗΣΕΙΣ ΥΠΟΛΟΓΙΣΜΟΥ ΓΡΑΜΜΩΝ ΡΟΗΣ/ΙΣΟΔΥΝΑΜΙΚΩΝ
+            // =========================================================================
+            const getStreamlines = useCallback(() => {
+                const numChannels = Math.max(1, ui.current.numStreamlines); 
+                const numLinesToDraw = numChannels - 1;
+                if (numLinesToDraw <= 0) {
+                    sim.current.systemFlux = 0; 
+                    return [];
+                }
+                const { gridHeads, gridK, gridFixed, GRID_W, GRID_H } = sim.current;
+                const paths = [];
+                const scaleX = CANVAS_RES_X / GRID_W;
+                const scaleY = CANVAS_RES_Y / GRID_H;
+                const inletCells = [];
+                let totalFlux = 0;
+
+                for(let x=0; x<GRID_W; x++){
+                    for(let y=0; y<GRID_H; y++){
+                       if (!gridFixed[x][y] && gridK[x][y] > 0) {
+                           let cellFlux = 0;
+                           let seedX = x + 0.5; let seedY = y + 0.5;
+                           
+                           if (y > 0 && gridFixed[x][y-1] && gridHeads[x][y-1] > gridHeads[x][y]) {
+                               cellFlux += gridK[x][y] * (gridHeads[x][y-1] - gridHeads[x][y]);
+                               seedY = y; 
+                           } else if (x > 0 && gridFixed[x-1][y] && gridHeads[x-1][y] > gridHeads[x][y]) {
+                               cellFlux += gridK[x][y] * (gridHeads[x-1][y] - gridHeads[x][y]);
+                               seedX = x; 
+                           } else if (x < GRID_W-1 && gridFixed[x+1][y] && gridHeads[x+1][y] > gridHeads[x][y]) {
+                               cellFlux += gridK[x][y] * (gridHeads[x+1][y] - gridHeads[x][y]);
+                               seedX = x + 1; 
+                           } else if (y < GRID_H-1 && gridFixed[x][y+1] && gridHeads[x][y+1] > gridHeads[x][y]) {
+                               cellFlux += gridK[x][y] * (gridHeads[x][y+1] - gridHeads[x][y]);
+                               seedY = y + 1; 
+                           }
+                           
+                           if (cellFlux > 0) {
+                               inletCells.push({x: seedX, y: seedY, flux: cellFlux});
+                               totalFlux += cellFlux;
+                           }
+                       }
+                    }
+                }
+                
+                sim.current.systemFlux = totalFlux; 
+                inletCells.sort((a, b) => a.x - b.x); 
+                const seeds = [];
+                
+                if (inletCells.length > 0 && totalFlux > 0) {
+                    const targetFluxStep = totalFlux / numChannels;
+                    let currentCumulativeFlux = 0;
+                    let targetFlux = targetFluxStep;
+                    let currentSeedCount = 0;
+                    for (let i = 0; i < inletCells.length; i++) {
+                        const cell = inletCells[i];
+                        const nextCumulativeFlux = currentCumulativeFlux + cell.flux;
+                        while (targetFlux <= nextCumulativeFlux && currentSeedCount < numLinesToDraw) {
+                            const fraction = cell.flux > 0 ? (targetFlux - currentCumulativeFlux) / cell.flux : 0.5;
+                            const finalX = cell.x % 1 === 0 ? cell.x : Math.floor(cell.x) + fraction;
+                            const finalY = cell.y % 1 === 0 ? cell.y : Math.floor(cell.y) + fraction;
+                            seeds.push({x: finalX, y: finalY});
+                            targetFlux += targetFluxStep;
+                            currentSeedCount++;
+                        }
+                        currentCumulativeFlux = nextCumulativeFlux;
+                    }
+                }
+
+                const isWall = (px, py) => {
+                    const ix = Math.floor(Math.max(0, Math.min(GRID_W - 1, px)));
+                    const iy = Math.floor(Math.max(0, Math.min(GRID_H - 1, py)));
+                    return gridK[ix][iy] === 0 && !gridFixed[ix][iy];
+                };
+
+                seeds.forEach(seed => {
+                    let cx = seed.x, cy = seed.y;
+                    const path = [];
+                    
+                    path.push({x: cx * scaleX, y: cy * scaleY});
+                    let steps = 0;
+                    const dt = 0.25; 
+
+                    while(steps < 6000) { 
+                        let v1 = getContinuousVelocityAt(cx, cy);
+                        if (v1.k === 0 || Math.hypot(v1.x, v1.y) < 1e-12) break;
+                        
+                        let mag1 = Math.hypot(v1.x, v1.y);
+                        let dx1 = (v1.x / mag1) * dt;
+                        let dy1 = (v1.y / mag1) * dt;
+
+                        let midX = cx + dx1 * 0.5;
+                        let midY = cy + dy1 * 0.5;
+                        
+                        let v2 = getContinuousVelocityAt(midX, midY);
+                        let dx2 = dx1, dy2 = dy1;
+                        if (v2.k !== 0) {
+                            let mag2 = Math.hypot(v2.x, v2.y);
+                            if (mag2 > 1e-12) {
+                                dx2 = (v2.x / mag2) * dt;
+                                dy2 = (v2.y / mag2) * dt;
+                            }
+                        }
+
+                        let nx = cx + dx2;
+                        let ny = cy + dy2;
+
+                        if (nx < 0 || nx > GRID_W || ny < 0 || ny > GRID_H) {
+                            path.push({x: Math.max(0, Math.min(GRID_W, nx)) * scaleX, y: Math.max(0, Math.min(GRID_H, ny)) * scaleY});
+                            break;
+                        }
+
+                        if (isWall(nx, ny)) {
+                            if (!isWall(nx, cy)) {
+                                ny = cy; 
+                            } else if (!isWall(cx, ny)) {
+                                nx = cx; 
+                            } else {
+                                break; 
+                            }
+                        }
+
+                        cx = nx; cy = ny;
+                        path.push({x: cx * scaleX, y: cy * scaleY});
+                        if (gridFixed[Math.floor(Math.max(0, Math.min(GRID_W-1, cx)))][Math.floor(Math.max(0, Math.min(GRID_H-1, cy)))]) break; 
+                        steps++;
+                    }
+                    if(path.length > 1) paths.push(path);
+                });
+                return paths;
+            }, [getContinuousVelocityAt]);
+
+            const getSmoothedContourLines = useCallback((threshold, dataFunc) => {
+                const { GRID_W, GRID_H } = sim.current;
+                const lines = [];
+                for (let x = 0; x < GRID_W; x++) {
+                    for (let y = 0; y < GRID_H; y++) {
+                        const getSafeK = (cx, cy) => {
+                            const clampedX = Math.max(0, Math.min(GRID_W - 1, cx));
+                            const clampedY = Math.max(0, Math.min(GRID_H - 1, cy));
+                            return sim.current.gridK[clampedX][clampedY];
+                        };
+
+                        const hasSoil = (getSafeK(x, y) > 0) || (getSafeK(x+1, y) > 0) || (getSafeK(x+1, y+1) > 0) || (getSafeK(x, y+1) > 0);
+                        if (!hasSoil) continue; 
+
+                        const v0 = dataFunc(x, y), v1 = dataFunc(x+1, y), v2 = dataFunc(x+1, y+1), v3 = dataFunc(x, y+1);
+                        
+                        if (v0 <= -9000 || v1 <= -9000 || v2 <= -9000 || v3 <= -9000) continue;
+
+                        let state = 0;
+                        if (v0 >= threshold) state |= 8;
+                        if (v1 >= threshold) state |= 4;
+                        if (v2 >= threshold) state |= 2;
+                        if (v3 >= threshold) state |= 1;
+                        if (state === 0 || state === 15) continue;
+
+                        const getT = (val1, val2) => Math.abs(val2 - val1) < 1e-12 ? 0.5 : (threshold - val1) / (val2 - val1);
+                        
+                        const p0 = { x: x + getT(v0, v1), y: y };     
+                        const p1 = { x: x + 1, y: y + getT(v1, v2) }; 
+                        const p2 = { x: x + getT(v3, v2), y: y + 1 }; 
+                        const p3 = { x: x, y: y + getT(v0, v3) };     
+
+                        let a, b;
+                        switch (state) {
+                            case 1:  a=p3; b=p2; break; case 2:  a=p1; b=p2; break; case 3:  a=p3; b=p1; break; case 4:  a=p0; b=p1; break;
+                            case 5:  a=p0; b=p3; lines.push({p1:p1, p2:p2}); break; case 6:  a=p0; b=p2; break; case 7:  a=p3; b=p0; break;
+                            case 8:  a=p3; b=p0; break; case 9:  a=p0; b=p2; break; case 10: a=p0; b=p1; lines.push({p1:p3, p2:p2}); break; 
+                            case 11: a=p0; b=p1; break; case 12: a=p3; b=p1; break; case 13: a=p1; b=p2; break; case 14: a=p3; b=p2; break;
+                        }
+                        if (state !== 5 && state !== 10 && a && b) lines.push({p1:a, p2:b});
+                    }
+                }
+                return lines;
+            }, []);
+
+            const drawContourAndLabel = useCallback((ctx, segments, valueStr, isThick, showLabelText) => {
+                if (segments.length === 0) return;
+                const { GRID_W, GRID_H } = sim.current;
+                const scaleX = CANVAS_RES_X / GRID_W, scaleY = CANVAS_RES_Y / GRID_H;
+                const zL = sim.current.zoomLevel;
+                const tf = getTransformFactor();
+
+                ctx.beginPath();
+                segments.forEach(l => { ctx.moveTo(l.p1.x * scaleX, l.p1.y * scaleY); ctx.lineTo(l.p2.x * scaleX, l.p2.y * scaleY); });
+                ctx.lineWidth = (isThick ? 2.0 : 1.5) / zL;
+                ctx.strokeStyle = '#000000';
+                ctx.stroke();
+
+                if (!showLabelText || !valueStr) return;
+
+                let bestSeg = null, bestScore = -Infinity;
+                const cx = GRID_W / 2, cy = GRID_H / 2;
+                
+                const step = Math.max(1, Math.floor(segments.length / 50)); 
+                for(let i = 0; i < segments.length; i += step) {
+                    const l = segments[i];
+                    const mx = (l.p1.x + l.p2.x) / 2, my = (l.p1.y + l.p2.y) / 2;
+                    const imx = Math.floor(mx), imy = Math.floor(my);
+
+                    let minDistToWall = 8;
+                    for (let r = 1; r <= 8; r++) {
+                        let hitWall = false;
+                        for(let dx = -r; dx <= r; dx++) {
+                            for(let dy = -r; dy <= r; dy++) {
+                                if (Math.abs(dx)!==r && Math.abs(dy)!==r) continue;
+                                const nx = imx + dx, ny = imy + dy;
+                                if (nx < 0 || nx >= GRID_W || ny < 0 || ny >= GRID_H || sim.current.gridK[nx][ny] === 0 || sim.current.gridHeads[nx][ny] <= -9000) {
+                                    hitWall = true; break;
+                                }
+                            }
+                            if(hitWall) break;
+                        }
+                        if(hitWall) { minDistToWall = r; break; }
+                    }
+
+                    const distToCenter = Math.hypot(mx - cx, my - cy);
+                    const score = (minDistToWall * 100) - distToCenter;
+
+                    if (score > bestScore) {
+                        bestScore = score; 
+                        bestSeg = {x: mx, y: my}; 
+                    }
+                }
+
+                if (!bestSeg && segments.length > 0) {
+                    const mid = segments[Math.floor(segments.length / 2)];
+                    bestSeg = {x: (mid.p1.x + mid.p2.x)/2, y: (mid.p1.y + mid.p2.y)/2};
+                }
+
+                if (bestSeg && valueStr) {
+                    const lx = bestSeg.x * scaleX, ly = bestSeg.y * scaleY;
+                    ctx.save();
+                    ctx.font = `bold ${12/zL}px sans-serif`;
+                    const width = ctx.measureText(valueStr).width + 6/zL;
+                    
+                    ctx.translate(lx, ly);
+                    ctx.scale(1/tf, 1);
+                    
+                    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                    ctx.fillRect(-width/2, -7/zL, width, 14/zL);
+                    ctx.fillStyle = '#000'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(valueStr, 0, 0);
+                    ctx.restore();
+                }
+            }, [getTransformFactor]);
+
+            // =========================================================================
+            // 5. ΚΥΡΙΑ ΣΥΝΑΡΤΗΣΗ ΣΧΕΔΙΑΣΗΣ (DRAW)
+            // =========================================================================
+            const draw = useCallback(() => {
+                if (!canvasRef.current) return;
+                const ctx = canvasRef.current.getContext('2d');
+                const currentUi = ui.current; // Φρέσκο state
+
+                ctx.clearRect(0, 0, CANVAS_RES_X, CANVAS_RES_Y);
+                
+                const { gridK, gridFixed, gridHeads, elements, currentElement, activePolygon, GRID_W, GRID_H } = sim.current;
+                const cellScaleX = CANVAS_RES_X / GRID_W, cellScaleY = CANVAS_RES_Y / GRID_H;
+                const showResults = currentUi.isSolving || sim.current.hasResults; 
+                const zL = sim.current.zoomLevel;
+                const tf = getTransformFactor();
+
+                ctx.save();
+                ctx.translate(sim.current.panOffset.x, sim.current.panOffset.y);
+                ctx.scale(zL * tf, zL);
+
+                // Vector Background Grid
+                ctx.strokeStyle = 'rgba(15, 23, 42, 0.08)';
+                ctx.lineWidth = 1 / zL;
+                ctx.beginPath();
+                for (let i = 1; i < 10; i++) {
+                    ctx.moveTo((i * CANVAS_RES_X) / 10, 0);
+                    ctx.lineTo((i * CANVAS_RES_X) / 10, CANVAS_RES_Y);
+                }
+                for (let i = 1; i < 5; i++) {
+                    ctx.moveTo(0, (i * CANVAS_RES_Y) / 5);
+                    ctx.lineTo(CANVAS_RES_X, (i * CANVAS_RES_Y) / 5);
+                }
+                ctx.stroke();
+
+                // Λεπτή Γραμμή για τα Όρια Ενεργής Σχεδίασης (Canvas Boundary)
+                ctx.save();
+                ctx.strokeStyle = '#94a3b8'; // Διακριτικό γκρι-μπλε (Slate-400)
+                ctx.lineWidth = 1 / zL;
+                ctx.strokeRect(0, 0, CANVAS_RES_X, CANVAS_RES_Y);
+                ctx.restore();
+
+                let localMinPress = 9999, localMaxPress = -9999, sumVel = 0, countVel = 0;
+                for (let x = 0; x < GRID_W; x++) {
+                    for (let y = 0; y < GRID_H; y++) {
+                        if (gridK[x][y] > 0 || gridFixed[x][y]) {
+                            const u = getPressureAt(x, y);
+                            if (gridHeads[x][y] > 0.1 || gridFixed[x][y]) {
+                                if (u < localMinPress) localMinPress = u;
+                                if (u > localMaxPress) localMaxPress = u;
+                            }
+                            if (!gridFixed[x][y] && x>0 && x<GRID_W-1 && y>0 && y<GRID_H-1 && gridK[x][y] > 0) {
+                                const mag = getVelocityMagAt(x, y);
+                                if (mag > 0) { sumVel += mag; countVel++; }
+                            }
+                        }
+                    }
+                }
+                if (localMaxPress > -9000) { sim.current.minPress = Math.max(0, localMinPress); sim.current.maxPress = localMaxPress; }
+                sim.current.maxVel = (countVel > 0 ? sumVel / countVel : 0) * 3.0;
+
+                for (let x = 0; x < GRID_W; x++) {
+                    for (let y = 0; y < GRID_H; y++) {
+                        const k = gridK[x][y];
+                        if (k > 0) { 
+                            const cell_z = sim.current.DOMAIN_HEIGHT - (y + 0.5) * (sim.current.DOMAIN_HEIGHT / GRID_H);
+                            const isWet = gridHeads[x][y] >= cell_z;
+                            const showHeatmapCell = currentUi.heatmapType === 'head' ? isWet : true;
+
+                            if (currentUi.showHeatmap && showResults && showHeatmapCell) { 
+                                let ratio = 0;
+                                if (currentUi.heatmapType === 'head') {
+                                    ratio = Math.max(0, Math.min(1, (gridHeads[x][y] - sim.current.minHead) / (sim.current.maxHead - sim.current.minHead || 1)));
+                                    ratio = Math.floor(ratio * currentUi.numEquipotentials) / Math.max(1, currentUi.numEquipotentials);
+                                    ctx.fillStyle = cHead(ratio);
+                                } else if (currentUi.heatmapType === 'pressure') {
+                                    const u = getPressureAt(x, y);
+                                    const bandedU = Math.floor(u / 50) * 50;
+                                    ratio = Math.max(0, Math.min(1, (bandedU - sim.current.minPress) / (sim.current.maxPress - sim.current.minPress || 1)));
+                                    ctx.fillStyle = cPress(ratio);
+                                } else {
+                                    ratio = Math.min(1, Math.pow((sim.current.maxVel > 0 ? getVelocityMagAt(x, y) / sim.current.maxVel : 0), 0.5));
+                                    ratio = Math.floor(ratio * 10) / 10;
+                                    ctx.fillStyle = cVel(ratio);
+                                }
+                            } else {
+                                if (k === K_VALUES[MAT_SOIL_CLAY]) ctx.fillStyle = '#a8a29e'; 
+                                else if (k === K_VALUES[MAT_SOIL_SAND]) ctx.fillStyle = '#fcd34d'; 
+                                else if (k === K_VALUES[MAT_SOIL_UNIT]) ctx.fillStyle = '#a7f3d0';
+                                else ctx.fillStyle = '#d6c0a6'; 
+                            }
+                            ctx.fillRect(x * cellScaleX, y * cellScaleY, cellScaleX + 0.5/(zL*tf), cellScaleY + 0.5/zL); 
+                        } else if (gridFixed[x][y]) { 
+                            if (!currentUi.showHeatmap || !showResults) {
+                                ctx.fillStyle = 'rgba(59, 130, 246, 0.15)'; 
+                                ctx.fillRect(x * cellScaleX, y * cellScaleY, cellScaleX + 0.5/(zL*tf), cellScaleY + 0.5/zL); 
+                            } else {
+                                ctx.fillStyle = 'rgba(59, 130, 246, 0.25)'; 
+                                ctx.fillRect(x * cellScaleX, y * cellScaleY, cellScaleX + 0.5/(zL*tf), cellScaleY + 0.5/zL);
+                            }
+                        }
+                    }
+                }
+
+                const drawSingleElement = (el, index, isPreview = false) => {
+                    const scX = CANVAS_RES_X / sim.current.DOMAIN_WIDTH;
+                    const scY = CANVAS_RES_Y / sim.current.DOMAIN_HEIGHT;
+                    const isSelected = currentUi.toolMode === 'select' && index === currentUi.selectedElementIndex;
+                    
+                    if (el.type === 'line') {
+                        if (currentUi.showHeatmap && showResults && [MAT_SOIL_SAND, MAT_SOIL_CLAY, MAT_SOIL_DEFAULT, MAT_SOIL_UNIT].includes(el.material)) {
+                            ctx.beginPath();
+                            ctx.moveTo(el.x1 * scX, CANVAS_RES_Y - el.z1 * scY); 
+                            ctx.lineTo(el.x2 * scX, CANVAS_RES_Y - el.z2 * scY);
+                            ctx.lineCap = 'round';
+                            ctx.lineWidth = 1.5 / zL;
+                            ctx.strokeStyle = 'rgb(120, 100, 80)';
+                            ctx.stroke();
+                            return; 
+                        }
+                        ctx.beginPath();
+                        ctx.moveTo(el.x1 * scX, CANVAS_RES_Y - el.z1 * scY); 
+                        ctx.lineTo(el.x2 * scX, CANVAS_RES_Y - el.z2 * scY);
+                        ctx.lineCap = 'round'; 
+                        
+                        if (el.material === MAT_IMPERMEABLE) { 
+                            ctx.strokeStyle = (showResults && currentUi.showFlowLines) ? '#f97316' : 'rgb(30, 41, 59)'; 
+                            ctx.lineWidth = (showResults && currentUi.showFlowLines) ? 2.5 / zL : el.width * scX; 
+                        }
+                        else if (el.material === MAT_WATER) { ctx.strokeStyle = 'rgb(59, 130, 246)'; ctx.lineWidth = 3 / zL; }
+                        else if (el.material === MAT_SOIL_CLAY) { ctx.strokeStyle = 'rgb(168, 162, 158)'; ctx.lineWidth = el.width * scX; }
+                        else if (el.material === MAT_SOIL_SAND) { ctx.strokeStyle = 'rgb(252, 211, 77)'; ctx.lineWidth = el.width * scX; }
+                        else if (el.material === MAT_SOIL_UNIT) { ctx.strokeStyle = 'rgb(52, 211, 153)'; ctx.lineWidth = el.width * scX; }
+                        else { ctx.strokeStyle = 'rgb(214, 192, 166)'; ctx.lineWidth = el.width * scX; }
+                        ctx.stroke();
+
+                        if (isSelected) {
+                            ctx.save();
+                            ctx.strokeStyle = '#ef4444'; 
+                            ctx.lineWidth = 2 / zL;
+                            ctx.setLineDash([6/zL, 6/zL]);
+                            ctx.stroke();
+                            ctx.fillStyle = '#ef4444';
+                            ctx.fillRect(el.x1 * scX - 4/zL, CANVAS_RES_Y - el.z1 * scY - 4/zL, 8/zL, 8/zL);
+                            ctx.fillRect(el.x2 * scX - 4/zL, CANVAS_RES_Y - el.z2 * scY - 4/zL, 8/zL, 8/zL);
+                            ctx.restore();
+                        }
+
+                    } else if (el.type === 'polygon') {
+                        
+                        if (currentUi.showHeatmap && showResults && !isPreview && !isSelected && el.material !== MAT_IMPERMEABLE) {
+                            ctx.beginPath();
+                            ctx.moveTo(el.points[0].x * scX, CANVAS_RES_Y - el.points[0].z * scY);
+                            for(let i=1; i<el.points.length; i++) {
+                                ctx.lineTo(el.points[i].x * scX, CANVAS_RES_Y - el.points[i].z * scY);
+                            }
+                            ctx.closePath();
+                            let strokeColor = 'rgb(140, 110, 80)'; 
+                            if (el.material === MAT_SOIL_CLAY) strokeColor = 'rgb(100, 95, 90)'; 
+                            else if (el.material === MAT_SOIL_SAND) strokeColor = 'rgb(180, 140, 40)'; 
+                            else if (el.material === MAT_SOIL_UNIT) strokeColor = 'rgb(6, 95, 70)';
+                            ctx.lineWidth = 3 / zL; 
+                            ctx.lineCap = 'round';
+                            ctx.strokeStyle = strokeColor;
+                            ctx.stroke();
+                            return; 
+                        }
+                        
+                        if (el.points.length < 2) return;
+
+                        ctx.beginPath();
+                        ctx.moveTo(el.points[0].x * scX, CANVAS_RES_Y - el.points[0].z * scY);
+                        for(let i=1; i<el.points.length; i++) {
+                            ctx.lineTo(el.points[i].x * scX, CANVAS_RES_Y - el.points[i].z * scY);
+                        }
+                        if (!isPreview) ctx.closePath();
+
+                        let fillColor = 'rgba(214, 192, 166, 0.5)';
+                        let strokeColor = 'rgb(214, 192, 166)';
+                        if (el.material === MAT_IMPERMEABLE) { 
+                            fillColor = 'rgba(30, 41, 59, 1.0)'; 
+                            strokeColor = (showResults && currentUi.showFlowLines) ? '#f97316' : 'rgb(15, 23, 42)'; 
+                        }
+                        else if (el.material === MAT_SOIL_CLAY) { fillColor = 'rgba(168, 162, 158, 0.5)'; strokeColor = 'rgb(168, 162, 158)'; }
+                        else if (el.material === MAT_SOIL_SAND) { fillColor = 'rgba(252, 211, 77, 0.5)'; strokeColor = 'rgb(252, 211, 77)'; }
+                        else if (el.material === MAT_SOIL_UNIT) { fillColor = 'rgba(167, 243, 208, 0.5)'; strokeColor = 'rgb(52, 211, 153)'; }
+
+                        if (!isPreview) {
+                            ctx.fillStyle = fillColor;
+                            ctx.fill();
+                        }
+
+                        ctx.lineWidth = (el.material === MAT_IMPERMEABLE && showResults && currentUi.showFlowLines) ? 2.5 / zL : 2 / zL;
+                        ctx.lineCap = 'round';
+                        ctx.strokeStyle = isPreview ? '#f43f5e' : strokeColor;
+                        
+                        if (isPreview) {
+                            ctx.setLineDash([5/zL, 5/zL]);
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                            ctx.fillStyle = '#f43f5e';
+                            el.points.forEach(p => {
+                                ctx.beginPath();
+                                ctx.arc(p.x * scX, CANVAS_RES_Y - p.z * scY, 4/zL, 0, 2*Math.PI);
+                                ctx.fill();
+                            });
+                        } else {
+                            if (!showResults || el.material === MAT_IMPERMEABLE) ctx.stroke();
+                        }
+
+                        if (isSelected) {
+                            ctx.save();
+                            ctx.strokeStyle = '#ef4444';
+                            ctx.lineWidth = 2 / zL;
+                            ctx.setLineDash([6/zL, 6/zL]);
+                            ctx.stroke();
+                            ctx.fillStyle = '#ef4444';
+                            el.points.forEach(p => {
+                                ctx.fillRect(p.x * scX - 4/zL, CANVAS_RES_Y - p.z * scY - 4/zL, 8/zL, 8/zL);
+                            });
+                            ctx.restore();
+                        }
+                    }
+                };
+
+                elements.forEach((el, idx) => drawSingleElement(el, idx));
+                if (currentElement) drawSingleElement(currentElement, -1, true);
+                if (activePolygon) drawSingleElement(activePolygon, -1, true);
+
+                // --- DRAW BOUNDARY BORDERS (Πιο λεπτή και διακεκομμένη γραμμή) ---
+                let leftSoilY = GRID_H, rightSoilY = GRID_H;
+                for(let y=0; y<GRID_H; y++) if(gridK[0][y] !== 0 || gridFixed[0][y]) { leftSoilY = y; break; }
+                for(let y=0; y<GRID_H; y++) if(gridK[GRID_W-1][y] !== 0 || gridFixed[GRID_W-1][y]) { rightSoilY = y; break; }
+
+                ctx.save();
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)'; // Λίγο πιο διάφανο μαύρο
+                ctx.lineWidth = 1.5 / zL; // Πιο λεπτή
+                ctx.setLineDash([8 / zL, 8 / zL]); // Διακεκομμένη
+                ctx.beginPath();
+                ctx.moveTo(0, 0); ctx.lineTo(CANVAS_RES_X, 0); 
+                ctx.moveTo(0, 0); ctx.lineTo(0, leftSoilY * cellScaleY); 
+                ctx.moveTo(CANVAS_RES_X, 0); ctx.lineTo(CANVAS_RES_X, rightSoilY * cellScaleY); 
+                ctx.stroke();
+                ctx.restore();
+
+                // --- DRAW PRESSURE DISTRIBUTION ON IMPERMEABLE ---
+                if (currentUi.showPressures) {
+                    const impPolys = [];
+                    const activeElements = [...sim.current.elements];
+                    if (sim.current.currentElement) activeElements.push(sim.current.currentElement);
+                    if (sim.current.activePolygon) activeElements.push(sim.current.activePolygon);
+
+                    activeElements.forEach(el => {
+                        if (el.material === MAT_IMPERMEABLE) {
+                            if (el.type === 'polygon' && el.points && el.points.length > 2) {
+                                impPolys.push(el.points);
+                            } else if (el.type === 'line' && el.x1 !== undefined) {
+                                const dx = el.x2 - el.x1;
+                                const dz = el.z2 - el.z1;
+                                const L = Math.hypot(dx, dz);
+                                if (L > 0.01) {
+                                    const nx = -dz/L * (el.width / 2);
+                                    const nz = dx/L * (el.width / 2);
+                                    impPolys.push([
+                                        {x: el.x1 + nx, z: el.z1 + nz},
+                                        {x: el.x2 + nx, z: el.z2 + nz},
+                                        {x: el.x2 - nx, z: el.z2 - nz},
+                                        {x: el.x1 - nx, z: el.z1 - nz}
+                                    ]);
+                                }
+                            }
+                        }
+                    });
+
+                    const checkPointInPoly = (px, pz, polyPoints) => {
+                        let inside = false;
+                        for (let i = 0, j = polyPoints.length - 1; i < polyPoints.length; j = i++) {
+                            const xi = polyPoints[i].x, zi = polyPoints[i].z;
+                            const xj = polyPoints[j].x, zj = polyPoints[j].z;
+                            const intersect = ((zi > pz) !== (zj > pz)) && (px < (xj - xi) * (pz - zi) / (zj - zi) + xi);
+                            if (intersect) inside = !inside;
+                        }
+                        return inside;
+                    };
+
+                    const getRobustPressure = (px, pz, nx, nz) => {
+                        // Scan strictly outwards avoiding dead cells (-9999)
+                        for (let step = 0.5; step <= 3.0; step += 0.5) {
+                            const sx = px + nx * (sim.current.DOMAIN_WIDTH / GRID_W) * step;
+                            const sz = pz + nz * (sim.current.DOMAIN_HEIGHT / GRID_H) * step;
+                            const gx = Math.floor((sx / sim.current.DOMAIN_WIDTH) * GRID_W);
+                            const gy = Math.floor(((sim.current.DOMAIN_HEIGHT - sz) / sim.current.DOMAIN_HEIGHT) * GRID_H);
+                            
+                            if (gx >= 0 && gx < GRID_W && gy >= 0 && gy < GRID_H) {
+                                if (gridK[gx][gy] > 0 || gridFixed[gx][gy]) {
+                                    const h = gridHeads[gx][gy];
+                                    if (h > -9000) return Math.max(0, (h - pz) * 10);
+                                }
+                            }
+                        }
+                        return 0;
+                    };
+
+                    const edges = [];
+                    let globalMaxU = 0.001;
+
+                    impPolys.forEach(poly => {
+                        for (let i = 0; i < poly.length; i++) {
+                            const p1 = poly[i];
+                            const p2 = poly[(i + 1) % poly.length];
+                            const dx = p2.x - p1.x;
+                            const dz = p2.z - p1.z;
+                            const L = Math.hypot(dx, dz);
+                            if (L < 0.1) continue;
+
+                            let nx = -dz / L;
+                            let nz = dx / L;
+                            
+                            const mx = (p1.x + p2.x) / 2;
+                            const mz = (p1.z + p2.z) / 2;
+                            if (checkPointInPoly(mx + nx * 0.05, mz + nz * 0.05, poly)) {
+                                nx = -nx;
+                                nz = -nz;
+                            }
+
+                            const pts = [];
+                            const numSteps = Math.max(4, Math.ceil(L / 0.5));
+                            let hasPressure = false;
+
+                            for (let j = 0; j <= numSteps; j++) {
+                                const t = j / numSteps;
+                                const px = p1.x + t * dx;
+                                const pz = p1.z + t * dz;
+
+                                let u = getRobustPressure(px, pz, nx, nz);
+                                
+                                if (u > 0) hasPressure = true;
+                                if (u > globalMaxU) globalMaxU = u;
+                                pts.push({ x: px, z: pz, u });
+                            }
+
+                            if (hasPressure) {
+                                edges.push({ pts, outNx: nx, outNz: nz });
+                            }
+                        }
+                    });
+
+                    if (edges.length > 0) {
+                        const scX = CANVAS_RES_X / sim.current.DOMAIN_WIDTH;
+                        const scY = CANVAS_RES_Y / sim.current.DOMAIN_HEIGHT;
+                        const scale = (sim.current.DOMAIN_HEIGHT * 0.15) / Math.max(globalMaxU, 1);
+
+                        edges.forEach(edge => {
+                            const { pts, outNx, outNz } = edge;
+                            
+                            ctx.beginPath();
+                            ctx.moveTo(pts[0].x * scX, CANVAS_RES_Y - pts[0].z * scY);
+                            for (let i = 1; i < pts.length; i++) {
+                                ctx.lineTo(pts[i].x * scX, CANVAS_RES_Y - pts[i].z * scY);
+                            }
+                            for (let i = pts.length - 1; i >= 0; i--) {
+                                const px = pts[i].x + outNx * pts[i].u * scale;
+                                const pz = pts[i].z + outNz * pts[i].u * scale;
+                                ctx.lineTo(px * scX, CANVAS_RES_Y - pz * scY);
+                            }
+                            ctx.closePath();
+                            ctx.fillStyle = 'rgba(168, 85, 247, 0.35)'; // μωβ με διαφάνεια
+                            ctx.fill();
+                            
+                            ctx.strokeStyle = 'rgb(147, 51, 234)';
+                            ctx.lineWidth = 1.5 / zL;
+                            ctx.stroke();
+
+                            ctx.beginPath();
+                            const step = Math.max(1, Math.floor(pts.length / 10));
+                            for (let i = 0; i < pts.length; i += step) {
+                                if (pts[i].u > 0.1) {
+                                    ctx.moveTo(pts[i].x * scX, CANVAS_RES_Y - pts[i].z * scY);
+                                    const px = pts[i].x + outNx * pts[i].u * scale;
+                                    const pz = pts[i].z + outNz * pts[i].u * scale;
+                                    ctx.lineTo(px * scX, CANVAS_RES_Y - pz * scY);
+                                }
+                            }
+                            if (pts.length % step !== 1 && pts[pts.length-1].u > 0.1) {
+                                const last = pts.length - 1;
+                                ctx.moveTo(pts[last].x * scX, CANVAS_RES_Y - pts[last].z * scY);
+                                const px = pts[last].x + outNx * pts[last].u * scale;
+                                const pz = pts[last].z + outNz * pts[last].u * scale;
+                                ctx.lineTo(px * scX, CANVAS_RES_Y - pz * scY);
+                            }
+                            ctx.strokeStyle = 'rgba(147, 51, 234, 0.6)';
+                            ctx.lineWidth = 1 / zL;
+                            ctx.stroke();
+
+                            const labelIndices = [0, Math.floor(pts.length/2), pts.length-1];
+                            labelIndices.forEach(idx => {
+                                const pt = pts[idx];
+                                if (pt.u > 1.0) {
+                                    const px = pt.x + outNx * pt.u * scale;
+                                    const pz = pt.z + outNz * pt.u * scale;
+                                    
+                                    ctx.save();
+                                    ctx.font = `bold ${10/zL}px sans-serif`;
+                                    const text = `${pt.u.toFixed(1)}`;
+                                    const tWidth = ctx.measureText(text).width + 6/zL;
+                                    const tX = px * scX;
+                                    const tY = CANVAS_RES_Y - pz * scY;
+
+                                    ctx.translate(tX, tY);
+                                    ctx.scale(1/tf, 1);
+                                    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                                    ctx.fillRect(-tWidth/2, -6/zL, tWidth, 12/zL);
+                                    ctx.fillStyle = '#6b21a8'; 
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(text, 0, 0);
+                                    ctx.restore();
+                                }
+                            });
+
+                            // +++ ΥΠΟΛΟΓΙΣΜΟΣ ΚΑΙ ΣΧΕΔΙΑΣΗ ΣΥΝΙΣΤΑΜΕΝΗΣ ΔΥΝΑΜΗΣ (F) +++
+                            let F_total = 0;
+                            let Mx = 0;
+                            let Mz = 0;
+
+                            for (let i = 0; i < pts.length - 1; i++) {
+                                const p1 = pts[i];
+                                const p2 = pts[i+1];
+                                const dx = p2.x - p1.x;
+                                const dz = p2.z - p1.z;
+                                const dl = Math.hypot(dx, dz);
+
+                                const u1 = p1.u;
+                                const u2 = p2.u;
+
+                                if (u1 + u2 > 0) {
+                                    const dF = 0.5 * (u1 + u2) * dl;
+                                    const dist_c = (dl / 3) * (u1 + 2 * u2) / (u1 + u2);
+                                    const cx = p1.x + (dx / dl) * dist_c;
+                                    const cz = p1.z + (dz / dl) * dist_c;
+
+                                    F_total += dF;
+                                    Mx += dF * cx;
+                                    Mz += dF * cz;
+                                }
+                            }
+
+                            if (F_total > 0.1) {
+                                const CPx = Mx / F_total;
+                                const CPz = Mz / F_total;
+
+                                const tipX = CPx * scX;
+                                const tipY = CANVAS_RES_Y - CPz * scY;
+                                const arrowLen = 50 / zL;
+
+                                ctx.save();
+                                ctx.translate(tipX, tipY);
+                                ctx.scale(1/tf, 1); // Ακύρωση του tf ώστε να μη παραμορφωθεί το βέλος
+                                
+                                // Η δύναμη σπρώχνει ΠΡΟΣ τον τοίχο, άρα αντίθετα από το outN
+                                // Στον καμβά, το Y κοιτάει προς τα κάτω, άρα +outNz
+                                const angle = Math.atan2(outNz, -outNx);
+                                ctx.rotate(angle);
+
+                                // Στέλεχος του βέλους
+                                ctx.beginPath();
+                                ctx.moveTo(-arrowLen, 0);
+                                ctx.lineTo(0, 0);
+                                ctx.strokeStyle = '#dc2626'; // Έντονο κόκκινο
+                                ctx.lineWidth = 3.5 / zL;
+                                ctx.lineCap = 'round';
+                                ctx.stroke();
+
+                                // Κεφαλή του βέλους
+                                const headLen = 14 / zL;
+                                ctx.beginPath();
+                                ctx.moveTo(0, 0);
+                                ctx.lineTo(-headLen * Math.cos(Math.PI / 7), -headLen * Math.sin(Math.PI / 7));
+                                ctx.lineTo(-headLen * Math.cos(Math.PI / 7), headLen * Math.sin(Math.PI / 7));
+                                ctx.lineTo(0, 0);
+                                ctx.fillStyle = '#dc2626';
+                                ctx.fill();
+
+                                // Ετικέτα τιμής Δύναμης (F)
+                                ctx.font = `bold ${11/zL}px sans-serif`;
+                                const fText = `F = ${F_total.toFixed(1)} kN/m`;
+                                const tWidth = ctx.measureText(fText).width + 8/zL;
+                                
+                                ctx.translate(-arrowLen - 12/zL - tWidth/2, 0);
+                                ctx.rotate(-angle); // Επαναφορά της γωνίας ώστε το κείμενο να είναι πάντα οριζόντιο
+                                
+                                ctx.fillStyle = 'rgba(255,255,255,0.95)';
+                                ctx.fillRect(-tWidth/2, -8/zL, tWidth, 16/zL);
+                                ctx.strokeStyle = 'rgba(220, 38, 38, 0.4)';
+                                ctx.lineWidth = 1/zL;
+                                ctx.strokeRect(-tWidth/2, -8/zL, tWidth, 16/zL);
+                                
+                                ctx.fillStyle = '#dc2626';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(fText, 0, 0);
+
+                                ctx.restore();
+                            }
+                        });
+                    }
+                }
+
+                if (showResults) {
+                    const streamlines = getStreamlines();
+                    
+                    // HEAD CONTOURS
+                    if (currentUi.showEquipotentials && currentUi.heatmapType === 'head') {
+                        const step = (sim.current.maxHead - sim.current.minHead) / currentUi.numEquipotentials;
+                        for (let i = 1; i < currentUi.numEquipotentials; i++) {
+                            const targetH = sim.current.minHead + i * step;
+                            drawContourAndLabel(ctx, getSmoothedContourLines(targetH, getHeadAt), targetH.toFixed(1), false, currentUi.showLabels);
+                        }
+                    }
+                    
+                    // PRESSURE CONTOURS
+                    if (currentUi.heatmapType === 'pressure') {
+                        const pRange = sim.current.maxPress - sim.current.minPress;
+                        if (pRange > 0) {
+                            const step = 50;
+                            const firstTick = Math.ceil(sim.current.minPress / step) * step;
+                            for (let targetP = firstTick; targetP <= sim.current.maxPress; targetP += step) {
+                                drawContourAndLabel(ctx, getSmoothedContourLines(targetP, getPressureAt), targetP.toFixed(0), true, currentUi.showLabels);
+                            }
+                        }
+                    }
+                    
+                    // VELOCITY CONTOURS
+                    if (currentUi.heatmapType === 'velocity') {
+                        for (let i = 1; i < 10; i++) drawContourAndLabel(ctx, getSmoothedContourLines(Math.pow(i/10, 2) * sim.current.maxVel, getVelocityMagAt), "", true, false);
+                    }
+
+                    if (currentUi.showFlowLines && currentUi.numStreamlines > 1) {
+                        ctx.lineWidth = 2.5 / zL; 
+                        ctx.strokeStyle = '#f97316'; 
+                        streamlines.forEach(path => {
+                            ctx.beginPath();
+                            if(path.length > 0) ctx.moveTo(path[0].x, path[0].y);
+                            for(let i=1; i<path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+                            ctx.stroke();
+                        });
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(0, CANVAS_RES_Y);
+                        ctx.lineTo(CANVAS_RES_X, CANVAS_RES_Y); 
+                        ctx.moveTo(0, 0); ctx.lineTo(0, CANVAS_RES_Y); 
+                        ctx.moveTo(CANVAS_RES_X, 0); ctx.lineTo(CANVAS_RES_X, CANVAS_RES_Y); 
+                        ctx.stroke();
+
+                        if (currentUi.showCircles && currentUi.numEquipotentials > 0 && currentUi.showEquipotentials && currentUi.heatmapType === 'head') {
+                            ctx.strokeStyle = 'rgba(220, 38, 38, 0.8)'; ctx.lineWidth = 1.5 / zL;
+                            const step = (sim.current.maxHead - sim.current.minHead) / currentUi.numEquipotentials;
+                            const intersections = [];
+                            for (let s = 0; s < streamlines.length; s++) {
+                                const path = streamlines[s], lineInters = [];
+                                for (let k = 0; k <= currentUi.numEquipotentials; k++) {
+                                    const targetH = sim.current.maxHead - k * step;
+                                    let foundP = null;
+                                    for (let i = 0; i < path.length - 1; i++) {
+                                        const p1 = path[i], p2 = path[i+1];
+                                        const h1 = getHeadAt(p1.x / cellScaleX, p1.y / cellScaleY), h2 = getHeadAt(p2.x / cellScaleX, p2.y / cellScaleY);
+                                        if ((h1 >= targetH && h2 <= targetH) || (h1 <= targetH && h2 >= targetH)) {
+                                            const t = (targetH - h1) / (h2 - h1); 
+                                            foundP = {x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y)};
+                                            break;
+                                        }
+                                    }
+                                    lineInters.push(foundP);
+                                }
+                                intersections.push(lineInters);
+                            }
+                            
+                            for (let s = 0; s < intersections.length - 1; s++) {
+                                for (let e = 0; e < currentUi.numEquipotentials; e++) {
+                                    const p1 = intersections[s][e], p2 = intersections[s+1][e], p3 = intersections[s+1][e+1], p4 = intersections[s][e+1];    
+                                    if (p1 && p2 && p3 && p4) {
+                                        const cx = (p1.x + p2.x + p3.x + p4.x) / 4, cy = (p1.y + p2.y + p3.y + p4.y) / 4;
+                                        
+                                        // Υπολογισμός διαστάσεων στο μετασχηματισμένο σύστημα
+                                        const tx1 = p1.x * tf, ty1 = p1.y;
+                                        const tx2 = p2.x * tf, ty2 = p2.y;
+                                        const tx3 = p3.x * tf, ty3 = p3.y;
+                                        const tx4 = p4.x * tf, ty4 = p4.y;
+
+                                        const wMid_t = Math.hypot((tx1+tx4)/2 - (tx2+tx3)/2, (ty1+ty4)/2 - (ty2+ty3)/2);
+                                        const hMid_t = Math.hypot((tx1+tx2)/2 - (tx4+tx3)/2, (ty1+ty2)/2 - (ty4+ty3)/2);
+                                        
+                                        const isSquare = wMid_t < hMid_t * 3 && hMid_t < wMid_t * 3;
+                                        const isReasonableSize = wMid_t < (CANVAS_RES_X / 3) && hMid_t < (CANVAS_RES_Y / 2);
+                                        
+                                        const gridX = Math.floor(cx / cellScaleX);
+                                        const gridY = Math.floor(cy / cellScaleY);
+                                        const isInsideWall = gridX >= 0 && gridX < GRID_W && gridY >= 0 && gridY < GRID_H && gridK[gridX][gridY] === 0 && !gridFixed[gridX][gridY];
+
+                                        if (isSquare && isReasonableSize && !isInsideWall) {
+                                            ctx.save();
+                                            ctx.translate(cx, cy);
+                                            ctx.scale(1/tf, 1);
+                                            ctx.beginPath(); 
+                                            ctx.arc(0, 0, Math.min(wMid_t, hMid_t) / 2 * 0.95, 0, 2 * Math.PI); 
+                                            ctx.stroke();
+                                            ctx.restore();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // --- DRAW VELOCITY VECTORS (Probes) ---
+                    if (currentUi.heatmapType === 'velocity' && sim.current.velocityProbes.length > 0) {
+                        sim.current.velocityProbes.forEach(probe => {
+                            const { x: px, z: pz } = probe;
+                            const gx = (px / sim.current.DOMAIN_WIDTH) * GRID_W;
+                            const gy = ((sim.current.DOMAIN_HEIGHT - pz) / sim.current.DOMAIN_HEIGHT) * GRID_H;
+
+                            const v = getContinuousVelocityAt(gx, gy);
+                            const mag = Math.hypot(v.x, v.y);
+
+                            if (mag > 0) {
+                                const canvasPx = px * (CANVAS_RES_X / sim.current.DOMAIN_WIDTH);
+                                const canvasPy = CANVAS_RES_Y - pz * (CANVAS_RES_Y / sim.current.DOMAIN_HEIGHT);
+
+                                const maxV = sim.current.maxVel > 0 ? sim.current.maxVel : 1;
+                                const arrowLen = (mag / maxV) * (50 / zL) + (15 / zL); 
+
+                                const dirX = v.x / mag;
+                                const dirY = v.y / mag; 
+
+                                const endX = canvasPx + dirX * arrowLen;
+                                const endY = canvasPy + dirY * arrowLen;
+
+                                ctx.beginPath();
+                                ctx.moveTo(canvasPx, canvasPy);
+                                ctx.lineTo(endX, endY);
+                                ctx.strokeStyle = '#000000';
+                                ctx.lineWidth = 2.5 / zL;
+                                ctx.stroke();
+
+                                const headLen = 10 / zL;
+                                const angle = Math.atan2(dirY, dirX);
+                                ctx.beginPath();
+                                ctx.moveTo(endX, endY);
+                                ctx.lineTo(endX - headLen * Math.cos(angle - Math.PI / 6), endY - headLen * Math.sin(angle - Math.PI / 6));
+                                ctx.lineTo(endX - headLen * Math.cos(angle + Math.PI / 6), endY - headLen * Math.sin(angle + Math.PI / 6));
+                                ctx.lineTo(endX, endY);
+                                ctx.fillStyle = '#000000';
+                                ctx.fill();
+
+                                ctx.beginPath();
+                                ctx.arc(canvasPx, canvasPy, 4 / zL, 0, 2 * Math.PI);
+                                ctx.fillStyle = '#ef4444';
+                                ctx.fill();
+
+                                ctx.save();
+                                ctx.font = `bold ${12/zL}px sans-serif`;
+                                const text = `${mag.toExponential(2)}`;
+                                const tWidth = ctx.measureText(text).width + 6/zL;
+                                const tX = endX + dirX * (15/zL);
+                                const tY = endY + dirY * (15/zL);
+
+                                ctx.translate(tX, tY);
+                                ctx.scale(1/tf, 1);
+                                
+                                ctx.fillStyle = 'rgba(255,255,255,0.95)';
+                                ctx.fillRect(-tWidth/2, -8/zL, tWidth, 16/zL);
+                                ctx.fillStyle = '#000';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(text, 0, 0);
+                                ctx.restore();
+                            }
+                        });
+                    }
+
+                    if (currentUi.heatmapType === 'head') {
+                        const minH = Math.round(sim.current.minHead);
+                        const maxH = Math.round(sim.current.maxHead);
+                        setLegend(prev => (prev.min === minH && prev.max === maxH) ? prev : { min: minH, max: maxH });
+                    } else if (currentUi.heatmapType === 'pressure') {
+                        const minP = Math.round(sim.current.minPress);
+                        const maxP = Math.round(sim.current.maxPress);
+                        setLegend(prev => (prev.min === minP && prev.max === maxP) ? prev : { min: minP, max: maxP });
+                    } else {
+                        setLegend(prev => (prev.min === 0 && prev.max === 'Max') ? prev : { min: 0, max: 'Max' });
+                    }
+                } else {
+                    setLegend(prev => (prev.min === '-' && prev.max === '-') ? prev : { min: '-', max: '-' });
+                }
+                
+                ctx.restore();
+
+            }, [getSmoothedContourLines, getStreamlines, drawContourAndLabel, getHeadAt, getPressureAt, getVelocityMagAt, getTransformFactor]);
+
+            // =========================================================================
+            // 6. ΣΥΝΑΡΤΗΣΕΙΣ ΕΛΕΓΧΟΥ ΟΘΟΝΗΣ & ZOOM
+            // =========================================================================
+            const resetView = useCallback(() => {
+                sim.current.zoomLevel = 1.0;
+                sim.current.panOffset = { x: 0, y: 0 };
+                draw();
+                drawRulers();
+            }, [draw, drawRulers]);
+
+            const handleZoom = useCallback((factor, px = null, py = null) => {
+                const oldZoom = sim.current.zoomLevel;
+                const newZoom = Math.min(Math.max(0.5, oldZoom * factor), 5.0);
+                
+                if (newZoom !== oldZoom) {
+                    let targetPx = px;
+                    let targetPy = py;
+
+                    if (targetPx === null || targetPy === null) {
+                        if (canvasRef.current) {
+                            const rect = canvasRef.current.getBoundingClientRect();
+                            // Σε περίπτωση null δίνουμε το κέντρο, αλλά σε internal pixels
+                            targetPx = CANVAS_RES_X / 2;
+                            targetPy = CANVAS_RES_Y / 2;
+                        }
+                    }
+
+                    const pointX = (targetPx - sim.current.panOffset.x) / oldZoom;
+                    const pointY = (targetPy - sim.current.panOffset.y) / oldZoom;
+
+                    sim.current.panOffset.x = targetPx - pointX * newZoom;
+                    sim.current.panOffset.y = targetPy - pointY * newZoom;
+                    sim.current.zoomLevel = newZoom;
+
+                    draw();
+                    drawRulers();
+                }
+            }, [draw, drawRulers]);
+
+            // =========================================================================
+            // 7. ΣΥΝΑΡΤΗΣΗ ΕΠΙΛΥΣΗΣ (SOLVER)
+            // =========================================================================
+            const solveStep = useCallback(() => {
+                let maxSweepError = 0;
+                const { gridK, gridRatio, gridFixed, gridHeads, GRID_W, GRID_H } = sim.current;
+                
+                const SWEEPS_PER_FRAME = Math.max(5, Math.floor(150000 / (GRID_W * GRID_H))); 
+                
+                for (let sweep = 0; sweep < SWEEPS_PER_FRAME; sweep++) {
+                    let currentError = 0;
+                    for (let x = 0; x < GRID_W; x++) {
+                      for (let y = 0; y < GRID_H; y++) {
+                        if (gridFixed[x][y]) continue; 
+                        const Ky_c = gridK[x][y];
+                        if (Ky_c === 0) continue; 
+                        
+                        const r = ui.current.anisotropyEnabled ? gridRatio[x][y] : 1.0;
+                        const Kx_c = Ky_c * r;
+                        let numer = 0, denom = 0; 
+
+                        let nx = x - 1, ny = y;
+                        if (nx >= 0 && gridK[nx][ny] > 0) {
+                             const r_n = ui.current.anisotropyEnabled ? gridRatio[nx][ny] : 1.0;
+                             const Kx_n = gridK[nx][ny] * r_n;
+                             const Keff_x = (2 * Kx_c * Kx_n) / (Kx_c + Kx_n);
+                             numer += Keff_x * gridHeads[nx][ny]; denom += Keff_x;
+                        } else if (nx >= 0 && gridFixed[nx][ny]) {
+                             numer += Kx_c * gridHeads[nx][ny]; denom += Kx_c; 
+                        }
+
+                        nx = x + 1; ny = y;
+                        if (nx < GRID_W && gridK[nx][ny] > 0) {
+                             const r_n = ui.current.anisotropyEnabled ? gridRatio[nx][ny] : 1.0;
+                             const Kx_n = gridK[nx][ny] * r_n;
+                             const Keff_x = (2 * Kx_c * Kx_n) / (Kx_c + Kx_n);
+                             numer += Keff_x * gridHeads[nx][ny]; denom += Keff_x;
+                        } else if (nx < GRID_W && gridFixed[nx][ny]) {
+                             numer += Kx_c * gridHeads[nx][ny]; denom += Kx_c;
+                        }
+
+                        nx = x; ny = y - 1;
+                        if (ny >= 0 && gridK[nx][ny] > 0) {
+                             const Keff_y = (2 * Ky_c * gridK[nx][ny]) / (Ky_c + gridK[nx][ny]);
+                             numer += Keff_y * gridHeads[nx][ny]; denom += Keff_y;
+                        } else if (ny >= 0 && gridFixed[nx][ny]) {
+                             numer += Ky_c * gridHeads[nx][ny]; denom += Ky_c;
+                        }
+
+                        nx = x; ny = y + 1;
+                        if (ny < GRID_H && gridK[nx][ny] > 0) {
+                             const Keff_y = (2 * Ky_c * gridK[nx][ny]) / (Ky_c + gridK[nx][ny]);
+                             numer += Keff_y * gridHeads[nx][ny]; denom += Keff_y;
+                        } else if (ny < GRID_H && gridFixed[nx][ny]) {
+                             numer += Ky_c * gridHeads[nx][ny]; denom += Ky_c;
+                        }
+
+                        if (denom > 0) {
+                            const val = numer / denom;
+                            const diff = Math.abs(val - gridHeads[x][y]);
+                            if (diff > currentError) currentError = diff;
+                            gridHeads[x][y] = gridHeads[x][y] + 1.6 * (val - gridHeads[x][y]); 
+                        }
+                      }
+                    }
+                    if (currentError > maxSweepError) maxSweepError = currentError;
+                }
+
+                let newHeads = gridHeads.map(row => [...row]);
+                for (let x = 0; x < GRID_W; x++) {
+                    for (let y = 0; y < GRID_H; y++) {
+                        if (gridK[x][y] === 0 && !gridFixed[x][y]) {
+                            newHeads[x][y] = -9999;
+                        }
+                    }
+                }
+                
+                for (let pass = 0; pass < 3; pass++) {
+                    let tempHeads = newHeads.map(row => [...row]);
+                    for (let x = 0; x < GRID_W; x++) {
+                        for (let y = 0; y < GRID_H; y++) {
+                            if (gridK[x][y] === 0 && !gridFixed[x][y]) {
+                                let sumH = 0, count = 0;
+                                const getH = (nx, ny) => (gridK[nx][ny] > 0 || gridFixed[nx][ny]) ? gridHeads[nx][ny] : newHeads[nx][ny];
+                                
+                                if (x > 0) { let h = getH(x-1, y); if (h > -9000) { sumH += h; count++; } }
+                                if (x < GRID_W-1) { let h = getH(x+1, y); if (h > -9000) { sumH += h; count++; } }
+                                if (y > 0) { let h = getH(x, y-1); if (h > -9000) { sumH += h; count++; } }
+                                if (y < GRID_H-1) { let h = getH(x, y+1); if (h > -9000) { sumH += h; count++; } }
+                                
+                                if (count > 0) tempHeads[x][y] = sumH / count;
+                            }
+                        }
+                    }
+                    newHeads = tempHeads;
+                }
+
+                for (let x = 0; x < GRID_W; x++) {
+                    for (let y = 0; y < GRID_H; y++) {
+                        gridHeads[x][y] = newHeads[x][y];
+                    }
+                }
+
+                sim.current.maxError = maxSweepError;
+                sim.current.iteration += SWEEPS_PER_FRAME;
+                sim.current.hasResults = true;
+                
+                if (maxSweepError > 0.00001 && ui.current.isSolving) {
+                    draw(); 
+                    calculateResults(); 
+                    updateHighFreqUI();
+                    reqRef.current = requestAnimationFrame(solveStep);
+                } else {
+                    sim.current.hasResults = true;
+                    draw(); 
+                    calculateResults();
+                    updateHighFreqUI();
+                    setUi({ isSolving: false });
+                }
+            }, [updateHighFreqUI, calculateResults, draw, setUi]); 
+
+            // =========================================================================
+            // 7.5 ΕΚΚΙΝΗΣΗ ΤΟΥ SOLVER LOOP 
+            // =========================================================================
+            useEffect(() => {
+                if (uiState.isSolving) {
+                    reqRef.current = requestAnimationFrame(solveStep);
+                }
+                return () => {
+                    if (reqRef.current) cancelAnimationFrame(reqRef.current);
+                };
+            }, [uiState.isSolving, solveStep]);
+
+            // =========================================================================
+            // 8. ΚΥΡΙΑ ΣΥΝΑΡΤΗΣΗ ΕΝΗΜΕΡΩΣΗΣ (TRIGGER)
+            // =========================================================================
+            const triggerUpdate = useCallback(() => {
+                rasterize();
+                draw();
+                calculateResults();
+                drawRulers();
+            }, [rasterize, draw, calculateResults, drawRulers]);
+
+            useEffect(() => {
+                triggerUpdate();
+                setTimeout(() => drawRulers(), 50); 
+                // eslint-disable-next-line react-hooks/exhaustive-deps
+            }, []);
+
+            useEffect(() => {
+                if (uiState.heatmapType !== 'velocity') {
+                    sim.current.velocityProbes = [];
+                    draw();
+                }
+            }, [uiState.heatmapType, draw]);
+
+            // =========================================================================
+            // 9. MOUSE/POINTER EVENTS
+            // =========================================================================
+            const hitTest = (px, pz) => {
+                for (let i = sim.current.elements.length - 1; i >= 0; i--) {
+                    const el = sim.current.elements[i];
+                    if (el.type === 'line') {
+                        const l2 = Math.pow(el.x1 - el.x2, 2) + Math.pow(el.z1 - el.z2, 2);
+                        let t = 0;
+                        if (l2 > 0) {
+                            t = ((px - el.x1) * (el.x2 - el.x1) + (pz - el.z1) * (el.z2 - el.z1)) / l2;
+                            t = Math.max(0, Math.min(1, t));
+                        }
+                        const projX = el.x1 + t * (el.x2 - el.x1);
+                        const projZ = el.z1 + t * (el.z2 - el.z1);
+                        const dist = Math.hypot(px - projX, pz - projZ);
+                        const threshold = (el.width / 2) + 1.5; 
+                        if (dist <= threshold) return i;
+                    }
+                }
+                for (let i = sim.current.elements.length - 1; i >= 0; i--) {
+                    const el = sim.current.elements[i];
+                    if (el.type === 'polygon') {
+                        let inside = false;
+                        for (let j = 0, k = el.points.length - 1; j < el.points.length; k = j++) {
+                            const xi = el.points[j].x, zi = el.points[j].z;
+                            const xk = el.points[k].x, zk = el.points[k].z;
+                            const intersect = ((zi > pz) !== (zk > pz)) && (px < (xk - xi) * (pz - zi) / (zk - zi) + xi);
+                            if (intersect) inside = !inside;
+                        }
+                        if (inside) return i;
+                    }
+                }
+                return null;
+            };
+
+            const getCoords = (e, applySnap = false) => {
+                const rect = canvasRef.current.getBoundingClientRect();
+                const scaleX_css = CANVAS_RES_X / rect.width;
+                const scaleY_css = CANVAS_RES_Y / rect.height;
+                
+                let px = (e.clientX - rect.left) * scaleX_css;
+                let py = (e.clientY - rect.top) * scaleY_css;
+                
+                px = (px - sim.current.panOffset.x) / sim.current.zoomLevel;
+                py = (py - sim.current.panOffset.y) / sim.current.zoomLevel;
+                
+                const scaleX_map = sim.current.DOMAIN_WIDTH / CANVAS_RES_X; 
+                const scaleY_map = sim.current.DOMAIN_HEIGHT / CANVAS_RES_Y;
+                const tf = getTransformFactor();
+                
+                let mx = (px / tf) * scaleX_map;
+                let mz = sim.current.DOMAIN_HEIGHT - (py * scaleY_map);
+                
+                if (applySnap && ui.current.snapEnabled) {
+                    const { GRID_W, GRID_H } = sim.current;
+                    const dx = sim.current.DOMAIN_WIDTH / GRID_W;
+                    const dz = sim.current.DOMAIN_HEIGHT / GRID_H;
+                    mx = Math.round(mx / dx) * dx; 
+                    mz = Math.round(mz / dz) * dz; 
+                }
+                return { x: mx, z: mz };
+            };
+
+            const handlePointerDown = (e) => {
+                if (e.button === 1 || sim.current.isSpacePressed || ui.current.toolMode === 'pan') { 
+                    sim.current.isPanning = true; 
+                    sim.current.lastPanPoint = { x: e.clientX, y: e.clientY };
+                    canvasRef.current.setPointerCapture(e.pointerId);
+                    return; 
+                }
+                if (ui.current.isSolving) return;
+                
+                if (ui.current.heatmapType !== 'head') {
+                    if (ui.current.heatmapType === 'velocity' && (sim.current.hasResults || ui.current.isSolving)) {
+                        const { x, z } = getCoords(e, false);
+                        sim.current.velocityProbes.push({x, z});
+                        draw();
+                    }
+                    return;
+                }
+
+                const isSnapping = true;
+                const { x, z } = getCoords(e, isSnapping);
+
+                if (ui.current.toolMode === 'select') {
+                    sim.current.dragMoved = false;
+
+                    let hitVertexIdx = null;
+                    if (ui.current.selectedElementIndex !== null) {
+                        const selEl = sim.current.elements[ui.current.selectedElementIndex];
+                        const hitRadius = sim.current.DOMAIN_WIDTH * 0.015 / sim.current.zoomLevel; 
+                        
+                        if (selEl.type === 'polygon') {
+                            const idx = selEl.points.findIndex(p => Math.hypot(p.x - x, p.z - z) < hitRadius);
+                            if (idx !== -1) hitVertexIdx = idx;
+                        } else if (selEl.type === 'line') {
+                            if (Math.hypot(selEl.x1 - x, selEl.z1 - z) < hitRadius) hitVertexIdx = 0;
+                            else if (Math.hypot(selEl.x2 - x, selEl.z2 - z) < hitRadius) hitVertexIdx = 1;
+                        }
+                    }
+
+                    if (hitVertexIdx !== null) {
+                        sim.current.snapshotBeforeDrag = JSON.parse(JSON.stringify(sim.current.elements)); // Αποθήκευση για UNDO
+                        canvasRef.current.setPointerCapture(e.pointerId);
+                        sim.current.isDraggingElement = true;
+                        sim.current.draggedPointIndex = hitVertexIdx;
+                        draw();
+                    } else {
+                        const hitIndex = hitTest(x, z);
+                        if (hitIndex !== null) {
+                            sim.current.snapshotBeforeDrag = JSON.parse(JSON.stringify(sim.current.elements)); // Αποθήκευση για UNDO
+                            const el = sim.current.elements[hitIndex];
+                            setUi({
+                                selectedElementIndex: hitIndex,
+                                selectedMaterial: el.material,
+                                strokeWidth: el.type === 'line' ? el.width : ui.current.strokeWidth
+                            });
+                            canvasRef.current.setPointerCapture(e.pointerId);
+                            sim.current.isDraggingElement = true;
+                            sim.current.draggedPointIndex = null;
+                            sim.current.dragStartPos = { x, z };
+                            sim.current.dragElementStart = JSON.parse(JSON.stringify(sim.current.elements[hitIndex]));
+                            draw(); 
+                        } else {
+                            setUi({selectedElementIndex: null});
+                        }
+                    }
+                } else {
+                    if (ui.current.selectedMaterial === MAT_WATER || ui.current.drawMode === 'line') {
+                        canvasRef.current.setPointerCapture(e.pointerId);
+                        const widthToUse = ui.current.selectedMaterial === MAT_WATER ? 2 : ui.current.strokeWidth;
+                        sim.current.currentElement = { type: 'line', material: ui.current.selectedMaterial, width: widthToUse, headValue: z, x1: x, z1: z, x2: x, z2: z };
+                    } else {
+                        if (!sim.current.activePolygon) {
+                            sim.current.activePolygon = { type: 'polygon', material: ui.current.selectedMaterial, points: [{x,z}, {x,z}] }; 
+                            setUi({isDrawingPolygon: true});
+                        } else {
+                            const pts = sim.current.activePolygon.points;
+                            const first = pts[0];
+                            const { GRID_W } = sim.current;
+                            const dx_snap = sim.current.DOMAIN_WIDTH / GRID_W;
+                            
+                            if (pts.length > 3 && Math.hypot(x - first.x, z - first.z) < dx_snap * 1.5) {
+                                sim.current.history.push(JSON.parse(JSON.stringify(sim.current.elements))); // Αποθήκευση για UNDO
+                                pts.pop(); 
+                                sim.current.elements.push({...sim.current.activePolygon});
+                                sim.current.activePolygon = null;
+                                sim.current.hasResults = false;
+                                sim.current.geometryChanged = true;
+                                setUi({isDrawingPolygon: false});
+                                triggerUpdate();
+                            } else {
+                                pts.splice(pts.length - 1, 0, {x, z});
+                                draw(); 
+                            }
+                        }
+                    }
+                }
+            };
+
+            const handlePointerMove = (e) => {
+                if (sim.current.isPanning && sim.current.lastPanPoint) {
+                    const rect = canvasRef.current.getBoundingClientRect();
+                    const scaleX_css = CANVAS_RES_X / rect.width;
+                    const scaleY_css = CANVAS_RES_Y / rect.height;
+
+                    const dx = e.clientX - sim.current.lastPanPoint.x;
+                    const dy = e.clientY - sim.current.lastPanPoint.y;
+                    sim.current.lastPanPoint = { x: e.clientX, y: e.clientY };
+
+                    sim.current.panOffset.x += dx * scaleX_css;
+                    sim.current.panOffset.y += dy * scaleY_css;
+                    draw();
+                    drawRulers();
+                    return;
+                }
+
+                let { x: exactX, z: exactZ } = getCoords(e, false);
+                sim.current.cursorPos = { x: exactX, z: exactZ };
+                if (!ui.current.isSolving) updateHighFreqUI(); 
+                
+                const isActivelyDrawing = !!sim.current.currentElement || !!sim.current.activePolygon || sim.current.isDraggingElement;
+                let { x: drawX, z: drawZ } = getCoords(e, isActivelyDrawing);
+
+                if (ui.current.toolMode === 'select' && sim.current.isDraggingElement && ui.current.selectedElementIndex !== null) {
+                    const dx = drawX - sim.current.dragStartPos.x;
+                    const dz = drawZ - sim.current.dragStartPos.z;
+                    
+                    if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
+                        sim.current.dragMoved = true;
+                        const el = sim.current.elements[ui.current.selectedElementIndex];
+                        const startEl = sim.current.dragElementStart;
+
+                        if (sim.current.draggedPointIndex !== null) {
+                            if (el.type === 'polygon') {
+                                el.points[sim.current.draggedPointIndex] = { x: drawX, z: drawZ };
+                            } else if (el.type === 'line') {
+                                if (sim.current.draggedPointIndex === 0) {
+                                    el.x1 = drawX; el.z1 = drawZ;
+                                } else {
+                                    el.x2 = drawX; el.z2 = drawZ;
+                                }
+                                if (el.material === MAT_WATER) {
+                                    el.z1 = drawZ; el.z2 = drawZ;
+                                    el.headValue = drawZ;
+                                }
+                            }
+                        } else {
+                            if (el.type === 'polygon') {
+                                el.points = startEl.points.map(p => ({ x: p.x + dx, z: p.z + dz }));
+                            } else if (el.type === 'line') {
+                                el.x1 = startEl.x1 + dx; el.z1 = startEl.z1 + dz;
+                                el.x2 = startEl.x2 + dx; el.z2 = startEl.z2 + dz;
+                                if (el.material === MAT_WATER) {
+                                    el.z2 = el.z1; 
+                                    el.headValue = el.z1;
+                                }
+                            }
+                        }
+                        
+                        sim.current.hasResults = false;
+                        sim.current.geometryChanged = true;
+                        rasterize(); draw();
+                    }
+
+                } else if (ui.current.toolMode === 'draw') {
+                    if (sim.current.currentElement && sim.current.currentElement.type === 'line') {
+                        if (sim.current.currentElement.material === MAT_WATER) drawZ = sim.current.currentElement.z1; 
+                        sim.current.currentElement.x2 = drawX;
+                        sim.current.currentElement.z2 = drawZ;
+                        sim.current.geometryChanged = true;
+                        rasterize(); draw();
+                    } else if (sim.current.activePolygon) {
+                        const pts = sim.current.activePolygon.points;
+                        pts[pts.length - 1] = { x: drawX, z: drawZ }; 
+                        draw(); 
+                    }
+                }
+            };
+
+            const handlePointerUp = (e) => {
+                if (sim.current.isPanning) { 
+                    sim.current.isPanning = false; 
+                    sim.current.lastPanPoint = null;
+                    try { canvasRef.current.releasePointerCapture(e.pointerId); } catch(err) {}
+                    return; 
+                }
+                
+                if (ui.current.toolMode === 'select' && sim.current.isDraggingElement) {
+                    try { canvasRef.current.releasePointerCapture(e.pointerId); } catch(err) {}
+                    sim.current.isDraggingElement = false;
+                    sim.current.draggedPointIndex = null;
+                    
+                    if (sim.current.dragMoved) {
+                        if (sim.current.snapshotBeforeDrag) {
+                            sim.current.history.push(sim.current.snapshotBeforeDrag); // Αποθήκευση για UNDO
+                        }
+                        sim.current.geometryChanged = true;
+                        triggerUpdate();
+                    } else {
+                        draw();
+                    }
+                    sim.current.snapshotBeforeDrag = null;
+                } else if (ui.current.toolMode === 'draw') {
+                    if (sim.current.currentElement && sim.current.currentElement.type === 'line') {
+                        try { canvasRef.current.releasePointerCapture(e.pointerId); } catch(err) {}
+                        const el = sim.current.currentElement;
+                        if (Math.hypot(el.x1 - el.x2, el.z1 - el.z2) > 0.1) { 
+                            sim.current.history.push(JSON.parse(JSON.stringify(sim.current.elements))); // Αποθήκευση για UNDO
+                            
+                            if (el.material === MAT_WATER) {
+                                const newMinX = Math.min(el.x1, el.x2);
+                                const newMaxX = Math.max(el.x1, el.x2);
+                                
+                                let updatedElements = [];
+                                sim.current.elements.forEach(oldEl => {
+                                    if (oldEl.material !== MAT_WATER || oldEl.type !== 'line') {
+                                        updatedElements.push(oldEl);
+                                        return;
+                                    }
+                                    const lMinX = Math.min(oldEl.x1, oldEl.x2);
+                                    const lMaxX = Math.max(oldEl.x1, oldEl.x2);
+                                    
+                                    if (lMaxX <= newMinX || lMinX >= newMaxX) {
+                                        updatedElements.push(oldEl);
+                                    } else {
+                                        if (lMinX < newMinX) updatedElements.push({ ...oldEl, x1: lMinX, x2: newMinX });
+                                        if (lMaxX > newMaxX) updatedElements.push({ ...oldEl, x1: newMaxX, x2: lMaxX });
+                                    }
+                                });
+                                sim.current.elements = updatedElements;
+                            }
+
+                            sim.current.elements.push({...el});
+                        }
+                        sim.current.currentElement = null;
+                        sim.current.hasResults = false; 
+                        sim.current.geometryChanged = true;
+                        triggerUpdate();
+                    }
+                }
+            };
+
+            const handleWheel = useCallback((e) => {
+                e.preventDefault();
+                if (!canvasRef.current) return;
+                const rect = canvasRef.current.getBoundingClientRect();
+                const scaleX_css = CANVAS_RES_X / rect.width;
+                const scaleY_css = CANVAS_RES_Y / rect.height;
+                const px = (e.clientX - rect.left) * scaleX_css;
+                const py = (e.clientY - rect.top) * scaleY_css;
+                handleZoom(e.deltaY < 0 ? 1.1 : 0.9, px, py);
+            }, [handleZoom]);
+
+            useEffect(() => {
+                const onKeyDown = (e) => { 
+                    if (e.code === 'Space') { 
+                        sim.current.isSpacePressed = true; 
+                    }
+                    if (e.code === 'Escape' && sim.current.activePolygon) {
+                        sim.current.activePolygon = null;
+                        setUi({isDrawingPolygon: false});
+                        draw();
+                    }
+                    if (e.code === 'Enter' && sim.current.activePolygon) {
+                        const pts = sim.current.activePolygon.points;
+                        if (pts.length > 2) {
+                            sim.current.history.push(JSON.parse(JSON.stringify(sim.current.elements))); // Αποθήκευση για UNDO
+                            pts.pop(); 
+                            sim.current.elements.push({...sim.current.activePolygon});
+                            sim.current.hasResults = false;
+                            sim.current.geometryChanged = true;
+                            triggerUpdate();
+                        }
+                        sim.current.activePolygon = null;
+                        setUi({isDrawingPolygon: false});
+                    }
+                    if ((e.code === 'Delete' || e.code === 'Backspace') && ui.current.selectedElementIndex !== null && !sim.current.isDraggingElement) {
+                        handleDeleteSelected();
+                    }
+                };
+                const onKeyUp = (e) => { 
+                    if (e.code === 'Space') { 
+                        sim.current.isSpacePressed = false; 
+                        sim.current.isPanning = false; 
+                        sim.current.lastPanPoint = null;
+                    } 
+                };
+                window.addEventListener('keydown', onKeyDown); 
+                window.addEventListener('keyup', onKeyUp);
+                return () => { window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp); };
+            }, [draw, triggerUpdate, setUi]);
+
+            const changeMeshRes = (res) => {
+                sim.current.GRID_W = res;
+                const newH = Math.round(res / 2);
+                sim.current.GRID_H = newH;
+                
+                sim.current.gridK = Array(res).fill().map(() => Array(newH).fill(0));
+                sim.current.gridRatio = Array(res).fill().map(() => Array(newH).fill(1.0));
+                sim.current.gridHeads = Array(res).fill().map(() => Array(newH).fill(0));
+                sim.current.gridFixed = Array(res).fill().map(() => Array(newH).fill(false));
+                
+                sim.current.geometryChanged = true;
+                sim.current.hasResults = false;
+                sim.current.iteration = 0;
+                sim.current.maxError = 0;
+                
+                setUi({ meshRes: res, isSolving: true });
+                triggerUpdate();
+            };
+
+            const handleClear = () => {
+                const { GRID_W, GRID_H } = sim.current;
+                sim.current.history.push(JSON.parse(JSON.stringify(sim.current.elements))); // Αποθήκευση για UNDO
+                sim.current.geometryChanged = true;
+                sim.current.elements = [];
+                sim.current.iteration = 0;
+                sim.current.maxError = 0;
+                sim.current.hasResults = false;
+                sim.current.activePolygon = null;
+                setUi({ isSolving: false, isDrawingPolygon: false, selectedElementIndex: null });
+                sim.current.gridK = Array(GRID_W).fill().map(() => Array(GRID_H).fill(0));
+                sim.current.gridHeads = Array(GRID_W).fill().map(() => Array(GRID_H).fill(0));
+                sim.current.gridFixed = Array(GRID_W).fill().map(() => Array(GRID_H).fill(false));
+                triggerUpdate();
+            };
+
+            const handleUndo = () => {
+                sim.current.geometryChanged = true;
+                if (sim.current.activePolygon) {
+                    const pts = sim.current.activePolygon.points;
+                    if (pts.length > 2) {
+                        // Εάν σχεδιάζουμε πολύγωνο, αφαιρούμε το τελευταίο σταθερό σημείο
+                        pts.splice(pts.length - 2, 1);
+                        draw();
+                        return;
+                    } else {
+                        sim.current.activePolygon = null;
+                        setUi({isDrawingPolygon: false});
+                        draw();
+                        return;
+                    }
+                } else if (sim.current.history && sim.current.history.length > 0) {
+                    sim.current.elements = sim.current.history.pop();
+                } else {
+                    return; // Τίποτα για να αναιρέσουμε
+                }
+
+                sim.current.iteration = 0;
+                sim.current.maxError = 0;
+                sim.current.hasResults = false;
+                setUi({ isSolving: false, selectedElementIndex: null });
+                triggerUpdate();
+            };
+
+            const handleDeleteSelected = () => {
+                if (ui.current.selectedElementIndex !== null) {
+                    sim.current.history.push(JSON.parse(JSON.stringify(sim.current.elements))); // Αποθήκευση για UNDO
+                    sim.current.geometryChanged = true;
+                    sim.current.elements.splice(ui.current.selectedElementIndex, 1);
+                    setUi({selectedElementIndex: null});
+                    sim.current.hasResults = false;
+                    triggerUpdate();
+                }
+            };
+
+            const handleAutoNd = () => {
+                if (results.q > 0 && ui.current.numStreamlines > 0 && sim.current.hasResults) {
+                    const range = sim.current.maxHead - sim.current.minHead;
+                    const activeRatio = ui.current.anisotropyEnabled ? sim.current.dominantRatio : 1.0;
+                    const kEq = Math.sqrt(sim.current.dominantK * sim.current.dominantK * activeRatio);
+                    const calculatedNd = Math.round(ui.current.numStreamlines * (kEq * range / results.q));
+                    setUi({ numEquipotentials: Math.max(1, Math.min(50, calculatedNd)) });
+                    draw();
+                } else {
+                    alert("Παρακαλώ εκτελέστε πρώτα την επίλυση για να υπολογιστεί η ροή.");
+                }
+            };
+
+            const getMatBtnClass = (mat) => {
+                const base = "mat-btn p-1.5 rounded border text-left flex items-center gap-2 transition hover:bg-slate-50";
+                const baseBlock = "mat-btn flex-1 p-1.5 rounded border flex flex-col items-center gap-1 transition hover:bg-slate-50 text-center";
+                
+                if (mat === uiState.selectedMaterial) {
+                    if (mat === MAT_IMPERMEABLE) return `${baseBlock} bg-slate-800 text-white ring-2 ring-slate-400 border-transparent`;
+                    if (mat === MAT_WATER) return `${baseBlock} bg-blue-600 text-white ring-2 ring-blue-300 border-transparent`;
+                    if (mat === MAT_SOIL_UNIT) return `${base} bg-emerald-100 border-emerald-400 text-emerald-900 ring-1 ring-emerald-400`;
+                    if (mat === MAT_SOIL_SAND) return `${base} bg-amber-100 border-amber-400 text-amber-900 ring-1 ring-amber-400`;
+                    if (mat === MAT_SOIL_CLAY) return `${base} bg-stone-200 border-stone-400 text-stone-800 ring-1 ring-stone-400`;
+                    if (mat === MAT_SOIL_DEFAULT) return `${base} bg-orange-50 border-orange-300 text-orange-900 ring-1 ring-orange-300`;
+                }
+                return (mat === MAT_IMPERMEABLE || mat === MAT_WATER) ? baseBlock : base;
+            };
+
+            const handleMaterialSelect = (matId) => {
+                if (ui.current.toolMode === 'select' && ui.current.selectedElementIndex !== null) {
+                    const el = sim.current.elements[ui.current.selectedElementIndex];
+                    if (el.type === 'polygon' && matId === MAT_WATER) return; 
+                    
+                    sim.current.history.push(JSON.parse(JSON.stringify(sim.current.elements))); // Αποθήκευση για UNDO
+                    el.material = matId;
+                    sim.current.geometryChanged = true;
+                    sim.current.hasResults = false;
+                    setUi({ selectedMaterial: matId });
+                    triggerUpdate();
+                } else {
+                    setUi({ selectedMaterial: matId });
+                }
+            };
+
+            return (
+                <div className="flex flex-col h-screen bg-slate-100 text-slate-800 font-sans overflow-hidden select-none">
+                    {/* Header */}
+                    <div className="bg-slate-900 text-white px-4 py-2 flex justify-between items-center shadow-md z-30 shrink-0 h-16">
+                        <div className="flex items-center gap-3 w-1/3">
+                            <img src="https://www.upatras.gr/wp-content/uploads/upatras-2.jpg" alt="UPatras Logo" className="h-10 w-auto object-contain bg-white p-1 rounded-sm" />
+                            <div className="flex flex-col">
+                                <span className="text-sm font-bold tracking-wider">Τμήμα Πολιτικών Μηχανικών</span>
+                                <span className="text-[11px] text-slate-400 mt-0.5">Αν. Καθ. Παναγιώτης Πελέκης</span>
+                            </div>
+                        </div>
+                        <div className="flex-1 flex justify-center items-center">
+                             <h1 className="text-sm font-bold text-amber-400 tracking-widest flex items-center gap-2">
+                                 <Activity size={18} /> SEEPAGE CAD
+                             </h1>
+                        </div>
+                        <div className="flex items-center justify-end gap-4 text-xs font-mono w-1/3">
+                            <div className="hidden sm:block text-slate-300" ref={cursorXRef}>X=0.00 Z=0.00</div>
+                            <div className="hidden sm:block text-amber-300 font-bold" ref={cursorValRef}>u=0.0 kPa</div>
+                            <div className="bg-slate-800 px-2 py-1 rounded text-slate-400" ref={errorTextRef}>Err: 0.0e+0</div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-1 overflow-hidden relative">
+                        
+                        {uiState.isDrawingPolygon && (
+                            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold z-50 animate-pulse pointer-events-none">
+                                Κάντε κλικ για κορυφές. [Enter] ή κλικ στην αρχή για κλείσιμο. [Esc] για ακύρωση.
+                            </div>
+                        )}
+
+                        {/* Sidebar */}
+                        <div className="w-64 bg-white border-r border-slate-200 flex flex-col z-20 shadow-lg overflow-y-auto shrink-0 text-xs custom-scrollbar">
+                            
+                            {/* Tool Selection (Draw, Select, Pan) */}
+                            <div className={`p-3 bg-slate-100 border-b border-slate-200 shadow-inner ${uiState.heatmapType !== 'head' ? 'opacity-50 pointer-events-none' : ''}`}>
+                                <div className="flex bg-slate-200/70 p-1 rounded-lg border border-slate-300 relative">
+                                    <button onClick={() => setUi({ toolMode: 'draw', selectedElementIndex: null })} 
+                                        className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-md transition-all z-10 ${uiState.toolMode === 'draw' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:text-blue-600'}`}>
+                                         <PenTool size={16} />
+                                         <span className="font-bold text-[9px] mt-0.5 uppercase tracking-wider">Σχεδιαση</span>
+                                    </button>
+                                    <button onClick={() => setUi({ toolMode: 'select', isDrawingPolygon: false })} 
+                                        className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-md transition-all z-10 ${uiState.toolMode === 'select' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-600 hover:text-amber-600'}`}>
+                                         <MousePointer2 size={16} />
+                                         <span className="font-bold text-[9px] mt-0.5 uppercase tracking-wider">Επιλογη</span>
+                                    </button>
+                                    <button onClick={() => setUi({ toolMode: 'pan', isDrawingPolygon: false, selectedElementIndex: null })} 
+                                        className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-md transition-all z-10 ${uiState.toolMode === 'pan' ? 'bg-slate-600 text-white shadow-md' : 'text-slate-600 hover:text-slate-900'}`}>
+                                         <Hand size={16} />
+                                         <span className="font-bold text-[9px] mt-0.5 uppercase tracking-wider">Pan</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Delete Selected Button */}
+                            {uiState.toolMode === 'select' && uiState.selectedElementIndex !== null && uiState.heatmapType === 'head' && (
+                                <div className="p-3 bg-red-50 border-b border-red-100 flex flex-col gap-2">
+                                    <span className="font-bold text-red-600 text-center">Στοιχείο Επιλέχθηκε</span>
+                                    <button onClick={handleDeleteSelected} className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded font-bold flex items-center justify-center gap-1 transition shadow-sm">
+                                        <Trash2 size={14} /> ΔΙΑΓΡΑΦΗ
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Actions */}
+                            <div className="p-3 border-b border-slate-100 flex flex-col gap-2 bg-slate-50">
+                                <div className="flex gap-2">
+                                    <button onClick={handleUndo} className="flex-1 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 rounded font-semibold flex items-center justify-center gap-1 transition text-[11px]">
+                                        <Undo2 size={14} /> Undo
+                                    </button>
+                                    <button onClick={handleClear} className="flex-1 py-1.5 bg-white border border-slate-200 hover:bg-red-50 text-slate-600 hover:text-red-600 rounded font-semibold flex items-center justify-center gap-1 transition text-[11px]">
+                                        <Trash2 size={14} /> Clear
+                                    </button>
+                                </div>
+                                <button onClick={() => setUi({ isSolving: !uiState.isSolving })} 
+                                    className={`w-full flex justify-center items-center gap-2 px-3 py-2 rounded-md font-bold text-white transition-all shadow-sm active:scale-95 ${uiState.isSolving ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-600 hover:bg-green-700'}`}>
+                                    {uiState.isSolving ? <Pause size={16} /> : <Play size={16} />}
+                                    <span>{uiState.isSolving ? 'ΠΑΥΣΗ' : 'ΕΠΙΛΥΣΗ'}</span>
+                                </button>
+                            </div>
+
+                            {/* View Settings */}
+                            <div className="p-3 border-b border-slate-100 bg-white space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Προβολη</h3>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="checkbox" checked={uiState.showHeatmap} onChange={e => { setUi({ showHeatmap: e.target.checked }); draw(); }} className="w-3.5 h-3.5 text-blue-600 rounded cursor-pointer" />
+                                        <span className="font-bold text-slate-700">Map</span>
+                                    </label>
+                                    <div className="flex flex-1 gap-1 ml-1">
+                                        {['head', 'pressure', 'velocity'].map(type => (
+                                            <button key={type} onClick={() => { setUi({ heatmapType: type }); draw(); }}
+                                                className={`text-[10px] px-2 py-1 rounded border flex-1 text-center leading-none ${uiState.heatmapType === type ? (type==='head'?'bg-blue-100 text-blue-700 border-blue-300 font-bold':type==='pressure'?'bg-purple-100 text-purple-700 border-purple-300 font-bold':'bg-red-100 text-red-700 border-red-300 font-bold') : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}`}>
+                                                {type === 'head' ? 'h' : type === 'pressure' ? 'u' : 'v'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 pt-1">
+                                    <label className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                        <input type="checkbox" checked={uiState.showFlowLines} onChange={e => { setUi({ showFlowLines: e.target.checked }); draw(); }} className="w-3.5 h-3.5 text-orange-600 rounded cursor-pointer" />
+                                        <span className="flex-1 truncate text-[10px]">Γραμμές ροής</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                        <input type="checkbox" checked={uiState.showEquipotentials} onChange={e => { setUi({ showEquipotentials: e.target.checked }); draw(); }} className="w-3.5 h-3.5 text-slate-600 rounded cursor-pointer" />
+                                        <span className="flex-1 truncate text-[10px]">Ισοδυναμικές</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                        <input type="checkbox" checked={uiState.showLabels} onChange={e => { setUi({ showLabels: e.target.checked }); draw(); }} className="w-3.5 h-3.5 text-blue-600 rounded cursor-pointer" />
+                                        <span className="flex-1 truncate">Ετικέτες</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer hover:bg-amber-50 p-1 rounded">
+                                        <input type="checkbox" checked={uiState.showCircles} onChange={e => { setUi({ showCircles: e.target.checked }); draw(); }} className="w-3.5 h-3.5 text-red-500 rounded cursor-pointer" />
+                                        <span className="flex-1 text-red-600 truncate">Κύκλοι</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Geometry Params */}
+                            <div className="p-3 border-b border-slate-100 bg-blue-50/50 space-y-3">
+                                <h3 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Γεωμετρια & Παραμετροι</h3>
+                                <div>
+                                    <label className="font-bold text-slate-600 flex justify-between mb-1"><span>Πλάτος L (m)</span></label>
+                                    <input type="number" value={uiState.domainWidth} onChange={e => {
+                                        let val = Math.max(10, Math.min(1000, Number(e.target.value)));
+                                        sim.current.geometryChanged = true;
+                                        sim.current.hasResults = false;
+                                        setUi({ domainWidth: val });
+                                        sim.current.DOMAIN_WIDTH = val; sim.current.DOMAIN_HEIGHT = val / 2;
+                                        triggerUpdate();
+                                    }} className="w-full px-2 py-1 text-xs border rounded bg-white focus:outline-none focus:border-blue-500 font-mono text-center" />
+                                </div>
+                                
+                                <div className="pt-1 border-t border-blue-100/50">
+                                    <label className="font-bold text-slate-600 flex justify-between mb-1">
+                                        <span className="text-[10px]">Πυκνότητα Πλέγματος</span>
+                                    </label>
+                                    <div className="flex gap-1">
+                                        {[50, 100, 200, 400].map(res => (
+                                            <button key={res} onClick={() => changeMeshRes(res)}
+                                                className={`flex-1 text-[9px] py-1 rounded border font-bold transition ${uiState.meshRes === res ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 hover:bg-slate-50 border-slate-200 shadow-sm'}`}>
+                                                L/{res}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="font-bold text-slate-600 flex justify-between mb-1 pt-2 border-t border-blue-100/50">
+                                        <span className="text-orange-600">Δίαυλοι (Nf)</span>
+                                        <span>{uiState.numStreamlines}</span>
+                                    </label>
+                                    <input type="range" min="1" max="30" value={uiState.numStreamlines} onChange={e => { setUi({ numStreamlines: Number(e.target.value) }); draw(); }} className="w-full h-1.5 bg-slate-200 rounded-lg cursor-pointer" />
+                                </div>
+                                <div>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="font-bold text-slate-600">Ισοδ. (Nd)</label>
+                                        <div className="flex items-center gap-1.5">
+                                            <button onClick={handleAutoNd} className="text-[9px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded border border-red-200 hover:bg-red-200 font-bold uppercase">Auto</button>
+                                            <span className="font-bold">{uiState.numEquipotentials}</span>
+                                        </div>
+                                    </div>
+                                    <input type="range" min="0" max="50" value={uiState.numEquipotentials} onChange={e => { setUi({ numEquipotentials: Number(e.target.value) }); draw(); }} className="w-full h-1.5 bg-slate-200 rounded-lg cursor-pointer" />
+                                </div>
+                            </div>
+
+                            {/* Materials */}
+                            <div className={`p-3 space-y-2 border-b border-slate-100 ${(uiState.heatmapType !== 'head' || (uiState.toolMode === 'select' && uiState.selectedElementIndex === null)) ? 'opacity-50 pointer-events-none' : ''}`}>
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Υλικα (Draw Mode)</h3>
+                                    <button onClick={() => setUi({ snapEnabled: !uiState.snapEnabled })} className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 leading-none ${uiState.snapEnabled ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-500'}`}>
+                                        <Magnet size={12} /> <span>{uiState.snapEnabled ? 'ON' : 'OFF'}</span>
+                                    </button>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => handleMaterialSelect(MAT_IMPERMEABLE)} className={getMatBtnClass(MAT_IMPERMEABLE)}>
+                                        <div className="w-full h-4 bg-slate-700 rounded-sm text-[9px] text-white font-mono flex items-center justify-center leading-none">k=0</div>
+                                        <div className="text-[10px] font-bold">Αδιαπέρατο</div>
+                                    </button>
+                                    <button onClick={() => handleMaterialSelect(MAT_WATER)} className={getMatBtnClass(MAT_WATER)}>
+                                        <div className="w-full h-4 bg-blue-500 rounded-sm text-[9px] text-white font-mono flex items-center justify-center leading-none">H=z</div>
+                                        <div className="text-[10px] font-bold">Νερό</div>
+                                    </button>
+                                </div>
+                                
+                                {uiState.selectedMaterial !== MAT_WATER && (
+                                    <div className="flex gap-1 mt-1 bg-slate-100 p-1 rounded border border-slate-200">
+                                        <button onClick={() => setUi({ drawMode: 'polygon' })}
+                                            className={`flex-1 text-[10px] py-1 rounded font-bold transition ${uiState.drawMode === 'polygon' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:bg-slate-200'}`}>
+                                            ΠΟΛΥΓΩΝΟ
+                                        </button>
+                                        <button onClick={() => setUi({ drawMode: 'line' })}
+                                            className={`flex-1 text-[10px] py-1 rounded font-bold transition ${uiState.drawMode === 'line' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:bg-slate-200'}`}>
+                                            ΓΡΑΜΜΗ
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Zones */}
+                            <div className={`p-3 space-y-2 ${(uiState.heatmapType !== 'head' || (uiState.toolMode === 'select' && uiState.selectedElementIndex === null)) ? 'opacity-50 pointer-events-none' : ''}`}>
+                                <div className="border border-purple-200 rounded p-1.5 bg-purple-50">
+                                    <label className="flex items-center gap-2 font-bold text-purple-700 cursor-pointer">
+                                        <input type="checkbox" checked={uiState.anisotropyEnabled} onChange={e => {
+                                            sim.current.geometryChanged = true;
+                                            sim.current.hasResults = false;
+                                            setUi({ anisotropyEnabled: e.target.checked, transformX: false, isSolving: true });
+                                            triggerUpdate();
+                                        }} className="w-3.5 h-3.5 text-purple-600 rounded cursor-pointer" />
+                                        <span className="flex-1 text-[10px]">Ανισοτροπία (kx &gt; ky)</span>
+                                    </label>
+                                    
+                                    {uiState.anisotropyEnabled && (
+                                        <label className="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-purple-200/60 font-bold text-blue-700 cursor-pointer transition">
+                                            <input type="checkbox" checked={uiState.transformX} onChange={e => {
+                                                sim.current.geometryChanged = true;
+                                                sim.current.hasResults = false;
+                                                setUi({ transformX: e.target.checked, isSolving: true });
+                                                triggerUpdate();
+                                            }} className="w-3.5 h-3.5 text-blue-600 rounded cursor-pointer" />
+                                            <span className="flex-1 text-[10px]">Μετασχηματισμός X (x&radic;(k<sub>y</sub>/k<sub>x</sub>))</span>
+                                        </label>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-1.5 mt-2">
+                                    {[ 
+                                        { id: MAT_SOIL_UNIT, name: 'ΜΟΝΑΔΙΑΙΟ', desc: 'kx = ky', bg: 'bg-emerald-400', lbl: 'k1' },
+                                        { id: MAT_SOIL_SAND, name: 'Άμμος', desc: 'kx = ky', bg: 'bg-amber-400', lbl: 'ks' },
+                                        { id: MAT_SOIL_DEFAULT, name: 'ΙΛΥΣ', desc: 'kx = 2 ky', bg: 'bg-orange-300', lbl: 'k2' },
+                                        { id: MAT_SOIL_CLAY, name: 'Άργιλος', desc: 'kx = 5 ky', bg: 'bg-stone-500', lbl: 'k5' }
+                                    ].map(mat => (
+                                        <button key={mat.id} onClick={() => handleMaterialSelect(mat.id)} className={getMatBtnClass(mat.id)}>
+                                            <div className={`w-5 h-5 ${mat.bg} rounded-sm flex items-center justify-center text-[8px] text-white font-mono shrink-0`}>{mat.lbl}</div>
+                                            <div className="text-left">
+                                                <div className="text-[11px] font-bold leading-none">{mat.name} <span className="font-mono font-normal text-slate-500 ml-1">k={K_DISPLAY[mat.id]} (m/d)</span></div>
+                                                <div className="text-[9px] opacity-70 leading-none mt-0.5">{mat.desc}</div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                                {((uiState.toolMode === 'select' && uiState.selectedElementIndex !== null && sim.current.elements[uiState.selectedElementIndex]?.type === 'line') || (uiState.toolMode !== 'select' && uiState.drawMode === 'line')) && uiState.selectedMaterial !== MAT_WATER && (
+                                    <div className="pt-2 border-t border-slate-100 mt-2">
+                                        <label className="text-[10px] font-bold text-slate-500 flex justify-between mb-1">ΠΛΑΤΟΣ ΓΡΑΜΜΗΣ: <span>{uiState.strokeWidth}m</span></label>
+                                        <input type="range" min="1" max="30" value={uiState.strokeWidth} onChange={e => {
+                                            const val = Number(e.target.value);
+                                            setUi({ strokeWidth: val });
+                                            if (ui.current.toolMode === 'select' && ui.current.selectedElementIndex !== null) {
+                                                const el = sim.current.elements[ui.current.selectedElementIndex];
+                                                if (el.type === 'line') {
+                                                    el.width = val;
+                                                    sim.current.geometryChanged = true;
+                                                    sim.current.hasResults = false;
+                                                    triggerUpdate();
+                                                }
+                                            }
+                                        }} className="w-full h-1.5 bg-slate-200 rounded-lg cursor-pointer" />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Canvas Area */}
+                        <div className="flex-1 bg-slate-200 flex items-center justify-center relative p-2 md:p-4 overflow-hidden min-w-0">
+                            <div ref={wrapperRef} 
+                                 className="relative shadow-2xl bg-white w-full max-w-[1000px]" 
+                                 style={{ 
+                                     aspectRatio: '2/1', 
+                                     cursor: uiState.toolMode === 'pan' ? (sim.current.isPanning ? 'grabbing' : 'grab') : (uiState.toolMode === 'select' ? 'default' : 'crosshair') 
+                                 }}>
+                                
+                                {/* Zoom Controls */}
+                                <div className="absolute bottom-6 left-6 flex flex-col gap-1 z-30">
+                                    <button onClick={() => handleZoom(1.2)} className="bg-white p-3 rounded shadow border border-slate-200 hover:bg-slate-50"><Plus size={20} className="text-slate-600" /></button>
+                                    <button onClick={() => handleZoom(1/1.2)} className="bg-white p-3 rounded shadow border border-slate-200 hover:bg-slate-50"><Minus size={20} className="text-slate-600" /></button>
+                                    <button onClick={resetView} className="bg-white p-3 rounded shadow border border-slate-200 hover:bg-slate-50"><Maximize size={20} className="text-slate-600" /></button>
+                                </div>
+
+                                {/* Results Box & Toggle Button */}
+                                <div className="absolute bottom-6 right-6 z-30 flex flex-col items-end gap-2">
+                                    {uiState.isResultsBoxOpen && (
+                                        <div className="bg-white/95 backdrop-blur border border-slate-300 shadow-lg rounded-lg p-3 w-60 flex flex-col gap-2">
+                                            <div className="flex justify-between items-center border-b border-slate-200 pb-1">
+                                                <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                                                    <ClipboardList size={12} className="text-blue-600" /> Αποτελέσματα
+                                                </h3>
+                                                <button onClick={() => setUi({ isResultsBoxOpen: false })} className="text-slate-400 hover:text-slate-700 transition-colors">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-slate-500">Παροχή (Q):</span>
+                                                <span className="font-mono font-bold text-blue-700">{results.q === 0 ? '-' : `${results.q.toExponential(2)} m³/d/m`}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs">
+                                                <span className="text-slate-500">i<sub>max</sub> (Exit):</span>
+                                                <span className="font-mono font-bold text-slate-700">{results.iMax === 0 ? '-' : results.iMax.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-xs mt-1 pt-1 border-t border-slate-100">
+                                                <span className="text-slate-500 font-bold">FS (Piping):</span>
+                                                <span className={`font-mono font-bold px-1.5 py-0.5 rounded ${results.fs === 0 ? 'text-slate-500 bg-slate-100' : results.fs < 1.0 ? 'text-red-600 bg-red-100' : results.fs < 1.5 ? 'text-orange-600 bg-orange-100' : 'text-green-600 bg-green-100'}`}>
+                                                    {results.fs > 0 ? results.fs.toFixed(2) : '-'}
+                                                </span>
+                                            </div>
+
+                                            {/* Q Modal Button */}
+                                            <button 
+                                                onClick={() => setUi({ showQModal: true })}
+                                                disabled={!sim.current.hasResults}
+                                                className={`w-full mt-1 py-1.5 text-[10px] font-bold rounded flex justify-center items-center gap-1 transition ${sim.current.hasResults ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100' : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'}`}
+                                            >
+                                                <Calculator size={12} /> Υπολογισμός Παροχής
+                                            </button>
+
+                                            {/* Pressure Distribution Button */}
+                                            <button 
+                                                onClick={() => {
+                                                    setUi({ showPressures: !uiState.showPressures });
+                                                    draw(); // Άμεση ζωγραφιά, δε χάνεται!
+                                                }}
+                                                className={`w-full mt-1 py-1.5 text-[10px] font-bold rounded flex justify-center items-center gap-1 transition ${uiState.showPressures ? 'bg-purple-600 text-white border border-purple-700 shadow-inner' : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'}`}
+                                            >
+                                                <Activity size={12} /> Κατανομή Πιέσεων
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Toggle Button */}
+                                    <button 
+                                        onClick={() => setUi({ isResultsBoxOpen: !uiState.isResultsBoxOpen })}
+                                        className={`flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg font-bold text-[11px] transition-all active:scale-95 border ${
+                                            sim.current.hasResults 
+                                                ? (uiState.isResultsBoxOpen ? 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200' : 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700') 
+                                                : 'bg-white text-slate-500 border-slate-300 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        <ClipboardList size={14} className={sim.current.hasResults && !uiState.isResultsBoxOpen ? "text-white" : ""} /> 
+                                        {uiState.isResultsBoxOpen ? 'Απόκρυψη Αποτελεσμάτων' : 'Εμφάνιση Αποτελεσμάτων'}
+                                    </button>
+                                </div>
+
+                                {/* --- RULER OVERLAY --- */}
+                                <canvas ref={rulerCanvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-20" />
+
+                                {/* Legend */}
+                                {legend.min !== '-' && (
+                                    <div className="absolute top-[26px] right-[26px] bg-white/95 backdrop-blur border border-slate-200 px-5 py-3 rounded-2xl shadow-lg flex items-center gap-4 text-sm font-bold text-slate-800 pointer-events-none z-40">
+                                        <span className="text-base px-1">{uiState.heatmapType === 'head' ? 'h :' : uiState.heatmapType === 'pressure' ? 'u :' : 'v :'}</span>
+                                        <span className="font-mono min-w-[2.5rem] text-right text-base">{legend.min}</span>
+                                        <div className="flex h-5 w-64 border border-slate-400 rounded-[3px] overflow-hidden shadow-inner">
+                                            {Array.from({ 
+                                                length: uiState.heatmapType === 'head' ? Math.max(1, uiState.numEquipotentials) : 
+                                                        uiState.heatmapType === 'pressure' ? (typeof legend.max === 'number' && typeof legend.min === 'number' ? Math.max(1, Math.ceil((legend.max - legend.min) / 50)) : 1) : 10 
+                                            }).map((_, i, arr) => {
+                                                let ratio = i / arr.length;
+                                                if (uiState.heatmapType === 'pressure' && typeof legend.min === 'number' && typeof legend.max === 'number') {
+                                                    const bandedU = Math.floor(legend.min / 50) * 50 + i * 50;
+                                                    ratio = Math.max(0, Math.min(1, (bandedU - legend.min) / (legend.max - legend.min || 1)));
+                                                }
+                                                const color = uiState.heatmapType === 'head' ? cHead(ratio) : 
+                                                              uiState.heatmapType === 'pressure' ? cPress(ratio) : cVel(ratio);
+                                                return <div key={i} style={{ flex: 1, backgroundColor: color }} />;
+                                            })}
+                                        </div>
+                                        <span className="font-mono min-w-[2.5rem] text-left text-base">{legend.max}</span>
+                                    </div>
+                                )}
+
+                                <canvas ref={canvasRef} width={CANVAS_RES_X} height={CANVAS_RES_Y} className="w-full h-full block" 
+                                    onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} onWheel={handleWheel}
+                                    style={{ touchAction: 'none' }} />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* --- MODAL ΓΙΑ ΕΞΙΣΩΣΗ Q --- */}
+                    {uiState.showQModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[95vh]">
+                                <div className="bg-slate-900 text-white px-4 py-3 flex justify-between items-center shrink-0">
+                                    <h2 className="font-bold flex items-center gap-2 tracking-wide"><ClipboardList size={18} className="text-amber-400"/> Υπολογισμός Παροχής (Q)</h2>
+                                    <button onClick={() => setUi({ showQModal: false })} className="text-slate-400 hover:text-white transition"><X size={20} /></button>
+                                </div>
+                                <div className="p-6 space-y-5 text-sm text-slate-700 overflow-y-auto custom-scrollbar">
+                                    
+                                    {/* Equation Description */}
+                                    <div className="bg-blue-50 text-blue-900 p-4 rounded-xl border border-blue-100 shadow-sm">
+                                        <p className="mb-2 text-[13px] text-center">Στη γενική περίπτωση ανισοτροπικού εδάφους με μετασχηματισμό, η παροχή από το δίκτυο ροής δίνεται από την εξίσωση:</p>
+                                        <div className="text-center text-xl font-serif mt-3 mb-2 font-bold tracking-widest text-slate-900">
+                                            q = k' &middot; &Delta;H &middot; <span className="inline-block align-middle"><span className="block border-b-2 border-slate-900 text-base leading-none pb-0.5">N<sub>f</sub></span><span className="block text-base leading-none pt-0.5">N<sub>d</sub></span></span>
+                                        </div>
+                                        <span className="text-xs text-blue-700/80 block text-center mt-2">
+                                            όπου <strong>k' = &radic;(k<sub>x</sub> &middot; k<sub>y</sub>)</strong> η ισοδύναμη περατότητα.
+                                        </span>
+                                    </div>
+
+                                    {/* Parameters Grid */}
+                                    <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs shadow-inner">
+                                        <div className="space-y-1.5">
+                                            <div className="text-slate-400 font-sans font-bold uppercase tracking-wider mb-2 border-b border-slate-200 pb-1">Εδαφος (Dominant)</div>
+                                            <div className="font-mono flex justify-between"><span>k<sub>y</sub>:</span> <strong>{sim.current.dominantK.toFixed(4)} m/d</strong></div>
+                                            <div className="font-mono flex justify-between"><span>k<sub>x</sub>:</span> <strong>{(sim.current.dominantK * (uiState.anisotropyEnabled ? sim.current.dominantRatio : 1.0)).toFixed(4)} m/d</strong></div>
+                                            <div className="font-mono flex justify-between text-blue-700 pt-1 border-t border-slate-200 mt-1"><span>k':</span> <strong>{Math.sqrt(sim.current.dominantK * sim.current.dominantK * (uiState.anisotropyEnabled ? sim.current.dominantRatio : 1.0)).toFixed(4)} m/d</strong></div>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <div className="text-slate-400 font-sans font-bold uppercase tracking-wider mb-2 border-b border-slate-200 pb-1">Δικτυο Ροης</div>
+                                            <div className="font-mono flex justify-between"><span>&Delta;H:</span> <strong>{(sim.current.maxHead - sim.current.minHead).toFixed(2)} m</strong></div>
+                                            <div className="font-mono flex justify-between"><span>N<sub>f</sub>:</span> <strong>{uiState.numStreamlines}</strong></div>
+                                            <div className="font-mono flex justify-between"><span>N<sub>d</sub>:</span> <strong>{uiState.numEquipotentials}</strong></div>
+                                        </div>
+                                    </div>
+
+                                    {/* Math Operation */}
+                                    <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 shadow-sm relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-100 rounded-bl-full -z-0 opacity-50"></div>
+                                        <div className="font-bold text-emerald-900 mb-2 text-xs uppercase tracking-wider relative z-10">Αποτελεσμα Δικτυου (Flownet)</div>
+                                        <div className="font-mono text-center text-emerald-800 bg-white p-3 rounded-lg border border-emerald-100 mb-3 shadow-inner text-[13px] relative z-10">
+                                            q = {Math.sqrt(sim.current.dominantK * sim.current.dominantK * (uiState.anisotropyEnabled ? sim.current.dominantRatio : 1.0)).toFixed(4)} &times; {(sim.current.maxHead - sim.current.minHead).toFixed(2)} &times; ({uiState.numStreamlines} / {uiState.numEquipotentials})
+                                        </div>
+                                        <div className="text-center text-xl font-bold text-emerald-700 relative z-10 font-mono tracking-tight">
+                                            q<sub>flownet</sub> = {(Math.sqrt(sim.current.dominantK * sim.current.dominantK * (uiState.anisotropyEnabled ? sim.current.dominantRatio : 1.0)) * (sim.current.maxHead - sim.current.minHead) * (uiState.numStreamlines / Math.max(1, uiState.numEquipotentials))).toExponential(2)} m&sup3;/d/m
+                                        </div>
+                                    </div>
+
+                                    {/* Numerical Comparison */}
+                                    <div className="flex justify-between items-center bg-slate-800 text-white p-4 rounded-xl shadow-md border border-slate-700">
+                                        <span className="font-bold text-sm text-slate-300">Αριθμητική Επίλυση (Solver):</span>
+                                        <span className="font-mono text-xl text-amber-400 font-bold tracking-tight">q<sub>num</sub> = {results.q.toExponential(2)} <span className="text-sm text-amber-500/80">m&sup3;/d/m</span></span>
+                                    </div>
+
+                                    {/* FS Calculation */}
+                                    <div className="bg-orange-50 p-4 rounded-xl border border-orange-200 shadow-sm relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 w-16 h-16 bg-orange-100 rounded-bl-full -z-0 opacity-50"></div>
+                                        <div className="font-bold text-orange-900 mb-2 text-xs uppercase tracking-wider relative z-10">Ασφαλεια εναντι Σωληνωσης (Piping)</div>
+                                        <div className="font-mono text-center text-orange-800 bg-white p-3 rounded-lg border border-orange-100 mb-3 shadow-inner text-[13px] relative z-10">
+                                            FS = i<sub>c</sub> / i<sub>max</sub> &nbsp;&nbsp;&nbsp; <span className="text-orange-600/80">(με i<sub>c</sub> &approx; 1.0)</span> <br/>
+                                            <span className="mt-1 block">FS = 1.0 / {results.iMax > 0 ? results.iMax.toFixed(3) : '-'}</span>
+                                        </div>
+                                        <div className="text-center text-xl font-bold text-orange-700 relative z-10 font-mono tracking-tight">
+                                            FS = {results.fs > 0 ? results.fs.toFixed(2) : '-'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
